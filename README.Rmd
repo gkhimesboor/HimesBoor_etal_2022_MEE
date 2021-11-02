@@ -24,4 +24,7 @@ Corresponding author: [G.K. Himes Boor](gkhimesboor@montana.edu)
 3.	Our results indicated that breeding female belugas that did not give birth the previous year have a reproductive rate of 0.279 (95% credible interval: 0.226 – 0.34) and exhibit a higher survival rate (0.962; 0.945 – 0.975) than non-breeders (0.931; 0.917 – 0.944). Non-breeders become breeders at a rate of about 0.072 (0.059 – 0.085) per year. Survival of calves ≤1 year was 0.926 (0.85 – 0.964), while apparent survival (i.e., surviving and staying with mother) of older calves (≥2 years old) was 0.492 (0.398 – 0.595). Our simulation analysis indicated our model is asymptotically unbiased. Even at moderate sample sizes and detection rates, the ecological parameters of interest were estimated with good precision and minimal bias.
 4.	This work yields an important new development in multievent mark-recapture modeling, allowing estimation of reproductive rates and juvenile survival for populations with extended adult-offspring associations and uncertain offspring ages. Additionally, our model provides new robust demographic rate estimates for an endangered population that indicate low reproduction and non-breeder survival are likely both contributing to the population’s continued decline. Breeder survival may also be a factor, but additional work is necessary to understand the relative contributions of each demographic rate and to identify exogenous stressors. 
 
-This is a good place to include things like - what JAGS/NIMBLE/R version and OS did you run this code on. With what settings. How long did it take. How much juice did it take. 
+### Code (R & JAGS)
+
+### Data
+
