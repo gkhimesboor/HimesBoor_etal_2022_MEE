@@ -1,0 +1,1029 @@
+---
+title: "v4.9-CIBW_Multievent_Model"
+author: "Gina Himes Boor"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.width = 8,fig.height = 10)
+
+library(dplyr)
+library(tidyverse)
+library(knitr)
+library(xtable)
+library(gtools)
+library(jagsUI)  #for easier running of parallel chains
+library(R2OpenBUGS)
+library(rjags)
+library(readr)
+
+
+```
+
+## Purpose
+
+This script takes Cook Inlet Beluga Whale (CIBW) sighting histories and analyzes the data using a hierarchical Bayesian multi-event model analyzed via JAGS to produce estimates of adult survival, calf survival, reproductive rates, adult and calf detection, and other nuisance parameters. The sighting history data file it requires as input is created by the code "V1.1_CIBW-Multievent-Model-DATA-PREP.Rmd", which imports raw sighting data collected by Dr. Tamara McGuire that has been exported from her photo-ID database and cleans and processes it to be used in this model.  
+
+This code also requires a "starting state matrix", which is a latent state matrix that is one possible collection of true states that matches the observed sighting history data. This starting state matrix is created manually from the sighting history data, then modified/corrected in the "v4.1-CIBWM_ultievent_Model-DATA_PREP.Rmd" code.  
+
+## Version 4.9
+This version estimates the following parameters of interest:
+(bold text signifies what's different from version 4.5 & v. 4.6)  
+* adult non-breeder survival (phiN)  
+* adult breeder survival (phiB)  
+__* dependant calf survival (YOY and 1yos; phiY) corrected *__  
+* older calf survival (2yo and older; phiC)  
+* first-time breeding transition probability (conditional fecundity, non-breeder to first time breeder; psiN)  
+* breeding probability (previous breeder with no calf to breeder with calf; psiB)  
+* adult NB detection (pN)  
+* adult B detection (pB)  
+* adult B detection (pB)  
+* dependent calf detection (deltaY)  
+* older calf detection (deltaC)  
+* new calf-age-assignment matrix with 8 parameters
+
+*No Single calf sighting filter:
+*Like v4.8, this version does NOT filter out whale-calf observations that occurred on one occassion only (i.e., only one survey within a single year when it was seen with a calf). This may mean that we have a few "false positives" in the data, but based on an analysis of the filtered dataset and new information about which of those have since been seen with a calf (~1/3; left: 19/60; right: 18/62) and which have since been found to be males (left side: 1/60, right side: 2/62), the filter seemed like too big a hammer to use to try to eliminate false positives.
+
+*Filter for Males seen with calves:
+For this version, I do eliminate the couple of calf sightings with whales that were later found to be males (left: n=1, right: n=2).
+
+*Includes Previous Corrections for Bc2c4+:
+This version corrects an error that I found in the state matrices for calf survival and calf aging. To correct the mistake, I now make the assumption that if a mother has two calves with a younger calf that has survived to age 2, that the older calf (age 4+) will leave the mother before the next field season (regardless of the fate of the younger calf). This allows the younger calf to increase in age appropriately without further complexities.
+
+__*Corrections from v4.8:*__
+Our previous models did not account for calves that died when their mother died. Because calves are not marked, all calf parameters are dependent the mother being alive. So our previous calf survival estimates were calf survival given the mother survived. We correct that in this version by calculating a derived parameter of breeder survival * calf survival, which will yield the true calf survival assuming that breeders in the different categories all experience the same mean survival (i.e., breeders with YOY or c1's survive at same rate as all other breeders, and breeders with older calves surviva at the same mean rate as all other breeders).
+
+
+### Version Summary 
+
+Version#  | Description
+--------- | -----------------
+v1.1      | Base Model; Estimates phiA, phiC, psi, p, delta; Filters out possible false +'s (seen w/calf once)
+v1.0      | *No longer used*; Same as v1.1 but does not filter out possible false +'s
+v#.1      | Note: all versions with #.1 uses data filtered for possible false positives (as 1.1 above)
+v1.1.dead | Same as 1.1 but includes data on found carcasses and estimates p(finding carcass)
+v2.1      | *No longer used*; Same as 1.1 but estimates phiY (YOY survival), and phiC=surv of 1yo+
+v3.1      | Same as 1.1 but estimates phiY (survival of dependent young-YOY & 1yo's) and phiC (2yo+ surv.)
+v3.1.dead | Same as 3.1 but includes carcass recovery data and estimates p(carcass detection)
+v3.2      | Same as 3.1 but estimates 2 calf detection parameters (deltaYc & deltaC) for depend. and older calves
+v4.1      | Same as 1.1 but w/ pre-/non-breeder (NB) and previous breeder (B) w/ different transitions for each
+v4.1.2    | Same as 4.1 but estimates phiY (dependent calf survival-YOY & 1yo's) and phiC (2yo+ surv.) (like v3.1)
+v4.2      | Same as 4.1.2 but estimates 2 calf detection parameters (deltaYc & deltaC)
+v4.3      | Same as 4.1 but estimates two adult survival rates, one for non-breeders and one for breeders
+v4.4      | Combines 4.2 and 4.3: 2 calf survival, 2 calf detection, 2 adult survival, 2 adult transitions
+v4.5      | Same as 4.4 but includes 3 adult detections for NB, one for B-no-calf, & one for B-calf (pN, pBn & pBc)
+v4.5.#    | Same as 4.5 but with a different calf-age-assignment matrices (all v4.5.#'s test different versions)
+v4.6      | Same as 4.5 but has a new (final) calf-age-assignment matrix with 8 parameters
+v4.7      | Same as 4.6 but fiters only known male-calf sightings out (not all single adult-calf sightings)
+v4.8      | Same as 4.7 but corrects an error in the state matrix 2 & 3 (calf survival and calf aging)
+v4.9      | Same as 4.8, but accounts for calves dying when their mother dies using a derived parameter (e.g., Sb * Syc)
+
+
+## Input Files Needed
+* Processed & Corrected Sighting Histories: inputs/v4.7-num_SH-left_side.csv (or SH-right... or SH-dual...)
+* Starting Latent State Matrix for JAGS: /inputs/v4.7-fxd_start_mat-left_side.csv (or -right_, -dual_)
+
+Both of the above files are created in v4.7-CIBW_Multievnt_Model-DATA_PREP.Rmd.
+
+## Right, Left, or Dual Whales
+The Sighting Report exported from the CIBW photo-ID database includes all whales, those identified by marks on their left side only, right side only, or marks from both sides have been linked (dual). This analysis can only be performed on one of these subsets at a time since they are not independent data sets (i.e., some right-side only individuals are the same individuals as some of the left-side only whales). The left-side and right-side data includes whales that are also in the dual category, but only the observations from the appropriate side. In general this analysis should not be performed on the dual whales since they are a biased sample of the whales (e.g., most have longer sighting histories and more prominent scarring). Below in the code, the user has to choose which data to use for the analysis.
+
+**Load and set up data for the model**
+
+```{r load and prep data, echo=TRUE}
+
+
+## Choose which data to be used (Comment out the other two types not used)
+ data.type<-"left_side"
+# data.type<-"right_side"
+# data.type<-"dual"
+
+# Read in the data: 
+CalfAge.SH.num.csv<-read_csv(file=paste("inputs/v4.7-num_SH-",data.type,".csv",sep=""))
+# Read in starting latent state matrix
+start.mat.csv<-read_csv(file=paste("inputs/v4.7-fxd_start_mat-",data.type,".csv",sep=""))
+
+
+# Read in the data: 
+mydata <- CalfAge.SH.num.csv[-c(1:3)]
+
+#head(mydata)
+#dim(mydata)
+N <- dim(mydata)[1]
+K <- dim(mydata)[2]
+
+# Compute the year of first capture for each individual:
+get.first.cap <- function(x) min(which(x != "1"))
+e <- apply(mydata, 1, get.first.cap)
+
+
+alive.function <- function(){
+  alive <- start.mat.csv
+  for (i in 1:N){
+       for (j in 1:K) {
+            if (j < e[i]) {alive[i,j] = NA}
+       }
+  }
+  alive
+}
+
+```
+
+
+# MODEL DESCRIPTION
+
+## CIBW Multievent Model
+
+**Events (n=72; 1:72):**
+1	=	0	not seen     
+2	=	P	seen alone     
+3	=	J0	seen with YOY     
+4	=	J1-	seen with a calf of indeterminate age (YOY or 1yo)     
+5	=	J1	seen with 1yo calf (i.e, 1st birthday to 2nd birthday)     
+6	=	J1+	seen with a calf of indeterminate age (1yo or older)     
+7	=	J2-	seen with a calf of indeterminate age (YOY, 1yo, or 2yo)     
+8	=	J2	seen with 2yo calf     
+9	=	J2+	seen with a calf of indeterminate age (2yo or older)     
+10	=	J3	seen with 3yo calf     
+11	=	J3+	seen with a calf of indeterminate age (3yo or older)     
+12	=	J4	seen with a 4yo calf     
+13	=	J4+	seen with a calf of indeterminate age (4yo or older)     
+14	=	Unk	seen with a calf of indeterminate age        
+15	=	J1+ J0	seen with 2 calves, one a YOY (J0) and one 1yo or older (except must be 2yo or older)   
+16	=	J1+ J1-	
+17	=	J1+ J1	
+18	=	J2- J0	
+19	=	J2- J1-	
+20	=	J2 J0	
+21	=	J2 J1-	
+22	=	J2 J2-	
+23	=	J2+ J0	
+24	=	J2+ J1-	
+25	=	J2+ J1	
+26	=	J2+ J1+	
+27	=	J2+ J2-	
+28	=	J2+ J2	
+29	=	J3 J0	
+30	=	J3 J1-	
+31	=	J3 J1	
+32	=	J3 J1+	
+33	=	J3 J2-	
+34	=	J3+ J0	
+35	=	J3+ J1-	
+36	=	J3+ J1	
+37	=	J3+ J1+	
+38	=	J3+ J2-	
+39	=	J3+ J2	
+40	=	J3+ J2+	
+41	=	J4 J0	
+42	=	J4 J1-	
+43	=	J4 J1	
+44	=	J4 J1+	
+45	=	J4 J2-	
+46	=	J4 J2	
+47	=	J4 J2+	
+48	=	J4+ J0	
+49	=	J4+ J1-     	
+50	=	J4+ J1     	
+51	=	J4+ J1+	     
+52	=	J4+ J2-	     
+53	=	J4+ J2	     
+54	=	J4+ J2+	     
+55	=	J0 Unk	     
+56	=	J1- Unk	     
+57	=	J1 Unk	     
+58	=	J1+ Unk	     
+59	=	J2- Unk	     
+60	=	J2 Unk	     
+61	=	J2+ Unk	     
+62	=	J3 Unk	     
+63	=	J3+ Unk	     
+64	=	J4 Unk	     
+65	=	J4+ Unk	     
+66	=	Unk Unk
+67   =    J1+ J1+
+68   =    J1+ J2-
+69   =    J1+ J2
+70   =    J1+ J2+
+71   =    J2- J2-
+72   =    J2+ J2+  
+
+The last 6 categories were added for the new version of the calf-age assignment matrix. In order to minimize the changes necessary to the starting latent state matrix, I tacked them to the end instead of adding them in their more logical location within the matrix. That is, the starting latent state matrix and its values remain the same for this version of the model compared to previous versions.
+	
+
+Assumptions:	
+	* females cannot give birth in consecutive years (i.e., siblings have to be at least 2yrs apart)
+	* siblings are assigned ages independently from one another
+  
+**TRUE STATES:**
+1  = NB = alive non-breeder     
+2  = B = alive previous breeder w/no calves
+3  = Byoy = breeder w/YOY               
+4  = Bc1 = breeder w/1yo calf           
+5  = Bc2 = breeder w/2yo calf              
+6  = Bc2yoy = breeder w/YOY & 2yo calf  
+7  = Bc3 = breeder w/3yo calf              
+8  = Bc3yoy = breeder w/YOY & 3yo calf    
+9  = Bc3c1 = breeder w/3yo & 1yo calf   
+10 = Bc4 = breeder w/4yo calf               
+11 = Bc4yoy = breeder w/YOY & 4yo calf    
+12 = Bc4c1 = breeder w/4yo & 1yo calf     
+13 = Bc4c2 = breeder w/4yo & 2yo calf  
+14 = D = dead     
+
+
+
+**MULTI-STATE MODEL**
+
+Before defining the model, we have to choose which data to use (right, left, dual), read in the data and the starter matrix (read in as .csv files), then set up the data. First we have to get its dimensions (N=number of individuals, K=number of sighting occassions). Then we compute the date of first sighting for each individual (e[1:N]).
+
+
+**Define and Run the JAGS model**
+
+```{r Multi-event Model for CIBW in JAGS - NB & B Survival, echo=TRUE}
+
+
+# Define the model.
+#Notation:
+
+# OBSERVATIONS (i.e. events)
+# see text above this code chunk
+
+# STATES
+# NB = alive non-breeder
+# B = alive previous breeder no calf
+# Byoy = breeder w/YOY
+# Bc1 = breeder w/1yo calf
+# Bc2 = breeder w/2yo calf
+# Bc2yoy = breeder w/YOY & 2yo calf
+# Bc3 = breeder w/3yo calf
+# Bc3yoy = breeder w/YOY & 3yo calf
+# Bc3c1 = breeder w/3yo & 1yo calf
+# Bc4 = breeder w/4yo calf
+# Bc4yoy = breeder w/YOY & 4yo calf
+# Bc4c1 = breeder w/4yo & 1yo calf
+# Bc4c2 = breeder w/4yo & 2yo calf
+# D = dead
+
+
+# PARAMETERS
+# phiN  survival prob. of non-breeding class of adults/subadults
+# phiB  survival prob. of breeding class of adults
+# phiYc survival prob. of dependent calves (YOYs & 1yos)
+# phiC  survival prob. of calves (2yos and older)
+# psiN  transition prob. from non-breeder to breeder
+# psiB  transition prob. from breeder-no calf to breeder-with calf
+# pN  detection prob. of non-breeding class adults/subadults
+# pBn  detection prob. of breeding female adults with no calf
+# pBc  detection prob. of breeding female adults with a calf of any age
+# deltaYc detection prob of YOY & 1yo calves
+# deltaC detectin prob of <=2yo calves
+# gamma prob of calf getting put in unknown age category
+# alphaTy prob of a YOY getting categorized as YOY without uncertainty
+# alphaTc prob of a <=1yo calf getting categorized as their true age without uncertainty
+# kappaY prob a YOY is assigned to J1- category
+# kappaC prob of a 3 or 4yo being assigned to the J2+ or J3+ categories respectively
+# omegaA prob of a 1 or 2yo being assigned to one of several categories that match true age with uncertainty
+# omegaB prob of a 3 or 4yo being assigned to true age with uncertainty (J3+ or J4+)
+# eta prob of 1 or 2yo being assigned to true age category bracketed high (J1-,J2-)
+# pi[1:13] prob. of being in initial states 1 to 12 (NB to Bc4c2)
+# 
+
+#MATRICES:
+#State-Transition Matrices
+#There are 4 state-transition matrices. I list them below with their definition and dimensions (nrow,ncol).
+# Matrix 1: Adult Survival [14,14]
+# Matrix 2: Young survival [14,37]
+# Matrix 3: Deterministic calf aging [37,14]
+# Matrix 4: Adult breeding transition [14,14]
+
+#Observation-Event Matrices
+#There are 3 observation matrices. I list them below with their dimensions (nrow,ncol).
+# Matrix 1: Adult detection [14,14]
+# Matrix 2: Calf detection [14,25]
+# Matrix 3: Calf-age determination [25,66]
+
+# THE MODEL:
+M <- function() {
+     
+  # PRIORS 
+  phiN ~ dunif(0,1)    #non-breeding adult/subadult survival
+  phiB ~ dunif(0,1)    #breeding adult survival
+  phiYc ~ dunif(0,1)   #YOY & 1yo survival
+  phiC ~ dunif(0,1)    #older calf survival
+  psiN ~ dunif(0,1)   #breeding transition NB->Byoy
+  psiB ~ dunif(0,1)   #breeding transition B->Byoy (or other Bc's)
+  pN ~ dunif(0,1)      #non-breeder class adult detection
+  pBn ~ dunif(0,1)      #detection of female adult with no calf
+  pBc ~ dunif(0,1)      #detection of female breeder with a calf of any age
+  deltaYc ~ dunif(0,1) #dependent calf detection
+  deltaC ~ dunif(0,1)  #older calf detection
+
+  # The following priors derive from the alpha matrix  
+  gamma ~ dunif(0,1)   # P(calf can be put in an age category vs unknown)
+  alphaTy ~ dunif(0,1) # P(a YOY calf is identified as such without uncertainty)
+  alphaTc ~ dunif(0,1) # P(a 1,2,3, or 4yo calf is identified as such without uncertainty)
+  kappaY ~ dunif(0,1)  # P(a YOY is assigned to J1- category)
+  kappaC ~ dunif(0,1)  # P(a 3 or 4yo is assigned to the J2+ or J3+ categories respectively)
+  omegaA ~ dunif(0,1)  # P(a 1 or 2yo is assigned to a category matching it true age: J1+/J1- or J2+/J2-)
+  omegaB ~ dunif(0,1)  # P(a 3 or 4yo is assigned to its true age with uncertainty: J3+ or J4+)
+  eta ~ dunif(0,1)     # P(a 1 or 2yo uncertain true age bracketed high: J1- or J2- respectively)
+
+  #set Dirichlet priors for initial states 1:12 (Byoy to Bc4c2; excludes dead state which = 0)
+  for (i in 1:13) {
+       beta[i] ~ dgamma(1,1) #induce Dirichlet prior
+       pi[i]<-beta[i]/sum(beta[])
+  }
+  
+  # DEFINE PARAMETERS	
+  # probabilities for each INITIAL STATE
+  px0[1] <- pi[1]   # prob. of initial state NB
+  px0[2] <- pi[2]   # prob. of being in initial state B
+  px0[3] <- pi[3]   # prob. of being in initial state Byoy  
+  px0[4] <- pi[4]   # prob. of being in initial state Bc1   
+  px0[5] <- pi[5]   # prob. of being in initial state Bc2   
+  px0[6] <- pi[6]   # prob. of being in initial state Bc2yoy
+  px0[7] <- pi[7]   # prob. of being in initial state Bc3   
+  px0[8] <- pi[8]   # prob. of being in initial state Bc3yoy
+  px0[9] <- pi[9]   # prob. of being in initial state Bc3c1 
+  px0[10] <- pi[10] # prob. of being in initial state Bc4   
+  px0[11] <- pi[11] # prob. of being in initial state Bc4yoy
+  px0[12] <- pi[12] # prob. of being in initial state Bc4c1 
+  px0[13] <- pi[13] # prob. of being in initial state Bc4c2
+  px0[14] <- 0      # prob. of being in initial state dead  
+  
+ # OBSERVATION PROCESS: probabilities of observations (columns) at a given occasion given 
+  #                      states (rows) at this occasion
+  
+  # Matrix 1: adult detection [14,14]
+  po1[1,1:14]<-c(1-pN,pN,0,0,0,0,0,0,0,0,0,0,0,0)
+  po1[2,1:14]<-c(1-pBn,0,pBn,0,0,0,0,0,0,0,0,0,0,0)
+  po1[3,1:14]<-c(1-pBc,0,0,pBc,0,0,0,0,0,0,0,0,0,0)
+  po1[4,1:14]<-c(1-pBc,0,0,0,pBc,0,0,0,0,0,0,0,0,0)
+  po1[5,1:14]<-c(1-pBc,0,0,0,0,pBc,0,0,0,0,0,0,0,0)
+  po1[6,1:14]<-c(1-pBc,0,0,0,0,0,pBc,0,0,0,0,0,0,0)
+  po1[7,1:14]<-c(1-pBc,0,0,0,0,0,0,pBc,0,0,0,0,0,0)
+  po1[8,1:14]<-c(1-pBc,0,0,0,0,0,0,0,pBc,0,0,0,0,0)
+  po1[9,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,pBc,0,0,0,0)
+  po1[10,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,0,pBc,0,0,0)
+  po1[11,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,0,0,pBc,0,0)
+  po1[12,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,0,0,0,pBc,0)
+  po1[13,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,0,0,0,0,pBc)
+  po1[14,1:14]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0)
+
+  # Matrix 2: Calf Detection [14,25]
+  po2[1,1:25]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[2,1:25]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[3,1:25]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[4,1:25]<-c(0,1-deltaYc,deltaYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[5,1:25]<-c(0,1-deltaYc,0,deltaYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[6,1:25]<-c(0,1-deltaC,0,0,deltaC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[7,1:25]<-c(0,(1-deltaYc)*(1-deltaC),0,0,0,deltaYc*(1-deltaC),deltaC*(1-deltaYc),
+                 0,0,0,0,0,0,0,0,0,0,0,0,deltaYc*deltaC,0,0,0,0,0)
+  po2[8,1:25]<-c(0,1-deltaC,0,0,0,0,0,deltaC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[9,1:25]<-c(0,(1-deltaYc)*(1-deltaC),0,0,0,0,0,0,deltaYc*(1-deltaC),deltaC*(1-deltaYc),
+                 0,0,0,0,0,0,0,0,0,0,deltaYc*deltaC,0,0,0,0)
+  po2[10,1:25]<-c(0,(1-deltaYc)*(1-deltaC),0,0,0,0,0,0,0,0,deltaYc*(1-deltaC),deltaC*(1-deltaYc),
+                  0,0,0,0,0,0,0,0,0,deltaYc*deltaC,0,0,0)
+  po2[11,1:25]<-c(0,1-deltaC,0,0,0,0,0,0,0,0,0,0,deltaC,0,0,0,0,0,0,0,0,0,0,0,0)
+  po2[12,1:25]<-c(0,(1-deltaYc)*(1-deltaC),0,0,0,0,0,0,0,0,0,0,0,deltaYc*(1-deltaC),
+                  deltaC*(1-deltaYc),0,0,0,0,0,0,0,deltaYc*deltaC,0,0)
+  po2[13,1:25]<-c(0,(1-deltaYc)*(1-deltaC),0,0,0,0,0,0,0,0,0,0,0,0,0,deltaYc*(1-deltaC),
+                  deltaC*(1-deltaYc),0,0,0,0,0,0,deltaYc*deltaC,0)
+  po2[14,1:25]<-c(0,(1-deltaC)*(1-deltaC),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,deltaC-deltaC^2,
+                  deltaC-deltaC^2,0,0,0,0,0,deltaC^2)
+
+  # Matrix 3: calf-age assignment [25,72]
+   po3[1,1:72]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[2,1:72]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[3,1:72]<-c(0,0,gamma*alphaTy,gamma*(1-alphaTy)*kappaY,0,0,gamma*(1-alphaTy)*(1-kappaY),0,
+                  0,0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[4,1:72]<-c(0,0,0,gamma*(1-alphaTc)*omegaA*eta,gamma*alphaTc,gamma*(1-alphaTc)*omegaA*(1-eta),
+                  gamma*(1-alphaTc)*(1-omegaA),0,0,0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[5,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaA),gamma*(1-alphaTc)*omegaA*eta,gamma*alphaTc,
+                  gamma*(1-alphaTc)*omegaA*(1-eta),0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[6,1:72]<-c(0,0,gamma*alphaTy,gamma*(1-alphaTy)*kappaY,0,0,gamma*(1-alphaTy)*(1-kappaY),0,
+                  0,0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[7,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaA),gamma*(1-alphaTc)*omegaA*eta,
+                  gamma*alphaTc,gamma*(1-alphaTc)*omegaA*(1-eta),0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0)
+   po3[8,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC),0,0,
+                  gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,0,0,
+                  1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[9,1:72]<-c(0,0,gamma*alphaTy,gamma*(1-alphaTy)*kappaY,0,0,gamma*(1-alphaTy)*(1-kappaY),0,
+                  0,0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[10,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC),0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,0,0,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[11,1:72]<-c(0,0,0,gamma*(1-alphaTc)*omegaA*eta,gamma*alphaTc,
+                   gamma*(1-alphaTc)*omegaA*(1-eta),gamma*(1-alphaTc)*(1-omegaA),0,0,0,0,0,0,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[12,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC),0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,
+                   0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[13,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,gamma*(1-alphaTc)*(1-omegaB)*kappaC,
+                   gamma*alphaTc,gamma*(1-alphaTc)*omegaB,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0)
+   po3[14,1:72]<-c(0,0,gamma*alphaTy,gamma*(1-alphaTy)*kappaY,0,0,gamma*(1-alphaTy)*(1-kappaY),
+                   0,0,0,0,0,0,1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[15,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[16,1:72]<-c(0,0,0,gamma*(1-alphaTc)*omegaA*eta,gamma*alphaTc,
+                   gamma*(1-alphaTc)*omegaA*(1-eta),gamma*(1-alphaTc)*(1-omegaA),0,0,0,0,0,0,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[17,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[18,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaA),gamma*(1-alphaTc)*omegaA*eta,
+                   gamma*alphaTc,gamma*(1-alphaTc)*omegaA*(1-eta),0,0,0,0,1-gamma,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[19,1:72]<-c(0,0,0,0,0,gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5,0,
+                   gamma*(1-alphaTc)*(1-omegaB)*kappaC,gamma*alphaTc,gamma*(1-alphaTc)*omegaB,
+                   1-gamma,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+   po3[20,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,(gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaA)),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaA)),0,
+                   (gamma*alphaTy)*(gamma*(1-alphaTc)*omegaA*eta),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*omegaA*eta),
+                   (gamma*alphaTy)*(gamma*alphaTc),(gamma*(1-alphaTy)*kappaY)*(gamma*alphaTc),
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*alphaTc),
+                   (gamma*alphaTy)*(gamma*(1-alphaTc)*omegaA*(1-eta)),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*omegaA*(1-eta)),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*omegaA*(1-eta)),0,0,0,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,(gamma*alphaTy)*(1-gamma),
+                   (gamma*(1-alphaTy)*kappaY)*(1-gamma),0,(1-gamma)*(gamma*(1-alphaTc)*(1-omegaA)),
+                   ((1-gamma)*(gamma*(1-alphaTc)*omegaA*eta))+((gamma*(1-alphaTy)*(1-kappaY))*(1-gamma)),
+                   (1-gamma)*(gamma*alphaTc),(1-gamma)*(gamma*(1-alphaTc)*omegaA*(1-eta)),0,
+                   0,0,0,(1-gamma)^2,0,(gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaA)),
+                   0,0,(gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*omegaA*eta),0)
+   po3[21,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,(gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),0,0,0,
+                   0,0,0,(gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,
+                   (gamma*alphaTy)*(gamma*alphaTc),(gamma*(1-alphaTy)*kappaY)*(gamma*alphaTc),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*alphaTc),
+                   (gamma*alphaTy)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*omegaB),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*omegaB),0,0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,(gamma*alphaTy)*(1-gamma),(gamma*(1-alphaTy)*kappaY)*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),
+                   (gamma*(1-alphaTy)*(1-kappaY))*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),(1-gamma)*(gamma*alphaTc),
+                   (1-gamma)*(gamma*(1-alphaTc)*omegaB),0,0,(1-gamma)^2,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),0,0,0,0)
+   po3[22,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*alphaTc),(gamma*alphaTc)*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*alphaTc),0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*omegaB),0,0,0,0,0,0,0,0,0,
+                   0,0,0,0,0,0,0,0,(gamma*(1-alphaTc)*omegaA*eta)*(1-gamma),
+                   (gamma*alphaTc)*(1-gamma),
+                   ((1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)))+
+                        ((gamma*(1-alphaTc)*omegaA*(1-eta))*(1-gamma)),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),(1-gamma)*(gamma*alphaTc),
+                   (1-gamma)*(gamma*(1-alphaTc)*omegaB),0,0,(1-gamma)^2,
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)),0,0,0,0)
+   po3[23,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   (gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,0,0,0,0,0,(gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),0,
+                   0,(gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,0,0,0,0,0,(gamma*alphaTy)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,0,
+                   (gamma*alphaTy)*(gamma*alphaTc),(gamma*(1-alphaTy)*kappaY)*(gamma*alphaTc),
+                   0,0,(gamma*(1-alphaTy)*(1-kappaY))*(gamma*alphaTc),0,0,
+                   (gamma*alphaTy)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTy)*kappaY)*(gamma*(1-alphaTc)*omegaB),0,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*omegaB),0,0,
+                   (gamma*alphaTy)*(1-gamma),(gamma*(1-alphaTy)*kappaY)*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTy)*(1-kappaY))*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),(1-gamma)*(gamma*alphaTc),
+                   (1-gamma)*(gamma*(1-alphaTc)*omegaB),(1-gamma)^2,0,
+                   (gamma*(1-alphaTy)*(1-kappaY))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,0,0,0)
+   po3[24,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,0,0,0,0,0,0,(gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*alphaTc),(gamma*alphaTc)*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*alphaTc),0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*omegaB),0,0,0,
+                   (gamma*(1-alphaTc)*omegaA*eta)*(1-gamma),(gamma*alphaTc)*(1-gamma),
+                   ((1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5))+
+                        ((gamma*(1-alphaTc)*omegaA*(1-eta))*(1-gamma)),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(1-gamma),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),(1-gamma)*(gamma*alphaTc),
+                   (1-gamma)*(gamma*(1-alphaTc)*omegaB),
+                   (1-gamma)^2,(gamma*(1-alphaTc)*omegaA*(1-eta))*
+                        (gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,0,0,0)
+   po3[25,1:72]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),0,0,0,0,0,0,0,0,
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),
+                   0,0,0,(gamma*(1-alphaTc)*(1-omegaA))*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*alphaTc),(gamma*alphaTc)*(gamma*alphaTc),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*alphaTc),0,0,0,
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*omegaB),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*omegaB),0,0,0,
+                   ((1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5))+
+                        ((gamma*(1-alphaTc)*(1-omegaA))*(1-gamma)),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(1-gamma),(gamma*alphaTc)*(1-gamma),
+                   ((1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5))+
+                        ((gamma*(1-alphaTc)*omegaA*(1-eta))*(1-gamma)),0,
+                   (1-gamma)*(gamma*(1-alphaTc)*(1-omegaB)*kappaC),(1-gamma)*(gamma*alphaTc),
+                   (1-gamma)*(gamma*(1-alphaTc)*omegaB),(1-gamma)^2,
+                   (gamma*(1-alphaTc)*(1-omegaA))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*omegaA*eta)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*alphaTc)*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   (gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5),
+                   0,(gamma*(1-alphaTc)*omegaA*(1-eta))*(gamma*(1-alphaTc)*(1-omegaB)*(1-kappaC)*0.5))
+
+  
+  # Initial Matrix: [14,14]
+  # Populate Initial State Matrix: deterministic initial state
+  po1.init[1,1:14]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0)
+  po1.init[2,1:14]<-c(0,0,1,0,0,0,0,0,0,0,0,0,0,0)
+  po1.init[3,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
+  po1.init[4,1:14]<-c(0,0,0,0,1,0,0,0,0,0,0,0,0,0)
+  po1.init[5,1:14]<-c(0,0,0,0,0,1,0,0,0,0,0,0,0,0)
+  po1.init[6,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  po1.init[7,1:14]<-c(0,0,0,0,0,0,0,1,0,0,0,0,0,0)
+  po1.init[8,1:14]<-c(0,0,0,0,0,0,0,0,1,0,0,0,0,0)
+  po1.init[9,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  po1.init[10,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  po1.init[11,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,1,0,0)
+  po1.init[12,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,1,0)
+  po1.init[13,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
+  po1.init[14,1:14]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  
+  
+  # form the matrix product
+  po <- po1 %*% po2 %*% po3
+  po.init <- po1.init %*% po2 %*% po3
+  
+  # STATE PROCESS: probabilities of states at t+1 (columns) given states at t (rows)
+ 
+  # State Matrix 1: adult survival [14,14]
+  px1[1,1:14]<-c(phiN,0,0,0,0,0,0,0,0,0,0,0,0,1-phiN)
+  px1[2,1:14]<-c(0,phiB,0,0,0,0,0,0,0,0,0,0,0,1-phiB)
+  px1[3,1:14]<-c(0,0,phiB,0,0,0,0,0,0,0,0,0,0,1-phiB)
+  px1[4,1:14]<-c(0,0,0,phiB,0,0,0,0,0,0,0,0,0,1-phiB)
+  px1[5,1:14]<-c(0,0,0,0,phiB,0,0,0,0,0,0,0,0,1-phiB)
+  px1[6,1:14]<-c(0,0,0,0,0,phiB,0,0,0,0,0,0,0,1-phiB)
+  px1[7,1:14]<-c(0,0,0,0,0,0,phiB,0,0,0,0,0,0,1-phiB)
+  px1[8,1:14]<-c(0,0,0,0,0,0,0,phiB,0,0,0,0,0,1-phiB)
+  px1[9,1:14]<-c(0,0,0,0,0,0,0,0,phiB,0,0,0,0,1-phiB)
+  px1[10,1:14]<-c(0,0,0,0,0,0,0,0,0,phiB,0,0,0,1-phiB)
+  px1[11,1:14]<-c(0,0,0,0,0,0,0,0,0,0,phiB,0,0,1-phiB)
+  px1[12,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,phiB,0,1-phiB)
+  px1[13,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,phiB,1-phiB)
+  px1[14,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
+
+ 
+  # State Matrix 2: calf survival [14,37]
+  # This matrix describes calf survival, wherein "survival" means the calf survives AND
+  #    stays with its mother to the next year.
+  # Departure states = original 14 states
+  # Arrival states:
+  # 1	NB = non-breeder
+  # 2	B = previous breeder with no calf
+  # 3	Byoy	= breeder w/YOY survived
+  # 4	Byoy-D	= breeder, YOY dead
+  # 5	Bc1	= breeder w/1yo calf alive
+  # 6	Bc1-D	= breeder w/1yo calf dead
+  # 7	Bc2	= breeder w/2yo calf alive
+  # 8	Bc2-D	= breeder w/2yo calf dead
+  # 9	Bc2yoy	= breeder w/2yo calf & YOY, both survive
+  # 10    Bc2yoy-D	= breeder w/2yo calf, YOY dead
+  # 11	Byoyc2-D	= breeder w/YOY, 2yo calf dead
+  # 12	Bc2yoy-DD	= breeder w/2yo calf & YOY, both dead
+  # 13	Bc3	= breeder w/3yo calf alive
+  # 14	Bc3-D	= breeder w/3yo calf dead
+  # 15	Bc3yoy	= breeder w/3yo calf & YOY, both survive
+  # 16	Bc3yoy-D	= breeder w/3yo calf, YOY dead
+  # 17	Byoyc3-D	= breeder w/YOY, 3yo calf dead
+  # 18	Bc3yoy-DD	= breeder w/3yo calf & YOY, both dead
+  # 19	Bc3c1	= breeder w/3yo calf & 1yo calf, both alive
+  # 20	Bc3c1-D	= breeder w/3yo calf, 1yo calf dead
+  # 21	Bc1c3-D	= breeder w/1yo calf, 3yo calf dead
+  # 22	Bc3c1-DD	= breeder w/3yo calf & 1yo calf, both dead
+  # 23	Bc4*	=breeder w/4yo calf alive
+  # 24	Bc4*-D	= breeder w/4yo calf that died/left mother
+  # 25	Bc4*yoy	= breeder w/4yo & YOY
+  # 26	Bc4*yoy-D	= breeder w/4yo calf, YOY dead
+  # 27	Byoyc4*-D	= breeder w/YOY, 4yo died/left
+  # 28	Bc4*yoy-DD	= breeder w/4yo & YOY, both dead/left
+  # 29	Bc4*c1	= breeder w/4yo calf & 1yo calf, both alive
+  # 30	Bc4*c1-D	= breeder w/4yo calf, 1yo calf dead
+  # 31	Bc1c4*-D	= breeder w/1yo calf, 4yo died/left
+  # 32	Bc4*c1-DD	= breeder w/4yo calf & 1yo calf, both dead/left
+  # 33	Bc4*c2	= breeder w/4yo calf & 2yo calf, both alive
+  # 34	Bc4*c2-D	= breeder w/4yo calf, 2yo calf dead
+  # 35	Bc2c4*-D	= breeder w/2yo calf, 4yo died/left
+  # 36	Bc4*c2-DD	= breeder w/2yo dead & 4yo calf dead/left
+  # 37	D	= dead
+
+  px2[1,1:37]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[2,1:37]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[3,1:37]<-c(0,0,phiYc,1-phiYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[4,1:37]<-c(0,0,0,0,phiYc,1-phiYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[5,1:37]<-c(0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[6,1:37]<-c(0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,(1-phiC)*(1-phiYc),0,
+                 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[7,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[8,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,
+                 (1-phiC)*(1-phiYc),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[9,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,
+                 (1-phiYc)*(1-phiC),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[10,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[11,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),
+                  (1-phiC)*phiYc,(1-phiC)*(1-phiYc),0,0,0,0,0,0,0,0,0)
+  px2[12,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,
+                  phiC*(1-phiYc),phiYc*(1-phiC),(1-phiC)*(1-phiYc),0,0,0,0,0)
+  px2[13,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                  0,phiC,1-phiC,0)
+  px2[14,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1)
+  
+  # State Matrix 3: young aging [37,14]
+  # This is a deterministic matrix describing a calf moving to the next age
+  #   given that it survived and stayed with its mother.
+  
+  # Departure states = 37 states from young survival matrix (see above)
+  # Arrival states:
+  # 1	NB = non-breeder
+  # 2	B = previous breeder with no calf
+  # 3	Bc1 = breeder w/calf who was a YOY and now a 1yo                              
+  # 4	Bc2 = breeder w/a now 2yo calf                                                
+  # 5	Bc3 = breeder w/a now 3yo calf                                                
+  # 6	Bc3c1 = breeder w/a now 3yo calf & now 1yo calf                               
+  # 7	Bc4 = breeder w/a now 4yo (or older) calf                                     
+  # 8	Bc4c1 = breeder w/a now 4yo (or older) calf & now 1yo calf                    
+  # 9	Bc4c2 = breeder w/a now 4yo (or older) calf & now 2yo calf                    
+  # 10    Byoy-D = breeder whose YOY died (no calves remaining)                         
+  # 11	Bc-D-L = breeder whose calf (or calves) died (or left) (no calves remaining)
+  # 12	Bc3yoy-D = breeder with a now 3yo (and YOY who died)                        
+  # 13	Bc4yoy-D = breeder with a now 4yo (or older) and YOY who died               
+  # 14 	D = dead adult   
+      	                                                           
+  px3[1,1:14]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px3[2,1:14]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0)
+  px3[3,1:14]<-c(0,0,1,0,0,0,0,0,0,0,0,0,0,0)
+  px3[4,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  px3[5,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
+  px3[6,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[7,1:14]<-c(0,0,0,0,1,0,0,0,0,0,0,0,0,0)
+  px3[8,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[9,1:14]<-c(0,0,0,0,0,1,0,0,0,0,0,0,0,0)
+  px3[10,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,1,0,0)
+  px3[11,1:14]<-c(0,0,1,0,0,0,0,0,0,0,0,0,0,0)
+  px3[12,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  px3[13,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  px3[14,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[15,1:14]<-c(0,0,0,0,0,0,0,1,0,0,0,0,0,0)
+  px3[16,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,1,0)
+  px3[17,1:14]<-c(0,0,1,0,0,0,0,0,0,0,0,0,0,0)
+  px3[18,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  px3[19,1:14]<-c(0,0,0,0,0,0,0,0,1,0,0,0,0,0)
+  px3[20,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  px3[21,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
+  px3[22,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[23,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  px3[24,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[25,1:14]<-c(0,0,0,0,0,0,0,1,0,0,0,0,0,0)
+  px3[26,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,1,0)
+  px3[27,1:14]<-c(0,0,1,0,0,0,0,0,0,0,0,0,0,0)
+  px3[28,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  px3[29,1:14]<-c(0,0,0,0,0,0,0,0,1,0,0,0,0,0)
+  px3[30,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  px3[31,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
+  px3[32,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[33,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px3[34,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px3[35,1:14]<-c(0,0,0,0,1,0,0,0,0,0,0,0,0,0)
+  px3[36,1:14]<-c(0,0,0,0,0,0,0,0,0,0,1,0,0,0)
+  px3[37,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
+
+  
+  # State Matrix 4: breeding transition [14,14]
+  # This matrix defines the probability of an adult giving birth to a YOY.
+  #   Because we assume that births cannot happen in consecutive years, an adult
+  #   can only transition from the NB state or from one of the "breeder states"
+  #   in which they have a calf 2 years old or older. In the latter case, the 
+  #   adult will be transitioning to a 2-calf state.
+
+  # Departure states = 14 states from young aging matrix (see above)
+  # Arrival states = original 14 states (NB, Byoy, Bc1,...,D)
+  px4[1,1:14]<-c(1-psiN,0,psiN,0,0,0,0,0,0,0,0,0,0,0)
+  px4[2,1:14]<-c(0,1-psiB,psiB,0,0,0,0,0,0,0,0,0,0,0)
+  px4[3,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
+  px4[4,1:14]<-c(0,0,0,0,1-psiB,psiB,0,0,0,0,0,0,0,0)
+  px4[5,1:14]<-c(0,0,0,0,0,0,1-psiB,psiB,0,0,0,0,0,0)
+  px4[6,1:14]<-c(0,0,0,0,0,0,0,0,1,0,0,0,0,0)
+  px4[7,1:14]<-c(0,0,0,0,0,0,0,0,0,1-psiB,psiB,0,0,0)
+  px4[8,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,1,0,0)
+  px4[9,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,1,0)
+  px4[10,1:14]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0)
+  px4[11,1:14]<-c(0,1-psiB,psiB,0,0,0,0,0,0,0,0,0,0,0)
+  px4[12,1:14]<-c(0,0,0,0,0,0,1,0,0,0,0,0,0,0)
+  px4[13,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
+  px4[14,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
+  
+  # form the matrix product
+  px <- px1 %*% px2 %*% px3 %*% px4
+  
+  #Likelihoods
+  for (i in 1:N)  # loop over each individual
+  {
+    # estimated probabilities of initial states are the proportions in each state at 
+    #    first capture occasion
+    alive[i,First[i]] ~ dcat(px0[1:14])
+    mydata[i,First[i]] ~ dcat(po.init[alive[i,First[i]],1:72])
+    
+    for (j in (First[i]+1):Years)  # loop over time
+    {
+      ## STATE EQUATIONS ##
+      # draw states at j given states at j-1
+      alive[i,j] ~ dcat(px[alive[i,j-1],1:14])
+      
+      ## OBSERVATION EQUATIONS ##
+      # draw observations at j given states at j
+      mydata[i,j] ~ dcat(po[alive[i,j],1:72])
+    }
+  }
+
+  #Calculate derived calf-survival parameter
+  phiYc.d <- phiB * phiYc
+  phiC.d <- phiB * phiC
+  
+}
+
+#write model code to file
+mod.file.name<-paste("jags_models/v4.9-ME-",data.type,".txt",sep="")
+write.model(M, mod.file.name)
+model.file <- paste(getwd(),mod.file.name, sep="/")
+
+
+## Bundle the data
+mydatax = list(N=N,Years=K,mydata=as.matrix(mydata),First=e)
+
+
+## Initial values
+initfunction <- function() list(pN=runif(1, 0.45, 0.5),phiB=runif(1,0.98,0.99),
+                                alphaTy=runif(1,0.4,0.6), pBn=runif(1,0.75,0.85),
+                                phiYc=runif(1,0.92,0.97), deltaC=runif(1,0.4,0.5),
+                                deltaYc=runif(1,0.48,0.6), kappaC=runif(1,0.5,0.7),
+                                omegaB=runif(1,0.5,0.7), phiC=runif(1,0.45,0.6),
+                                alive=as.matrix(alive.function()))
+
+
+# Specify the parameters to be monitored
+parameters <- c("phiN","phiB","phiC","phiC.d","phiYc","phiYc.d","psiN","psiB","pN","pBn","pBc","deltaYc",
+                "deltaC","alphaTy","alphaTc","gamma","kappaY","kappaC","omegaA",
+                "omegaB","eta","pi")
+
+#Set up model run parameters
+nc<-4
+ni<-55000
+nbi<-10000
+nt<-10
+
+# Fit the model:
+# for testing
+# out <- jags(mydatax,inits=initfunction,parameters,model.file,n.chains=4,
+#             n.iter=100,n.burnin=5)
+# out <- jags(mydatax,inits=initfunction,parameters,model.file,n.chains=3,n.iter=6000,
+#             n.burnin=1500,n.cores=3)
+
+out <- jags(mydatax,inits=initfunction,parameters,model.file,n.chains=nc,n.iter=ni,
+             n.thin=nt,n.burnin=nbi,parallel=T,n.cores=nc)
+
+
+```
+
+
+```{r Model Output}
+
+# Check convergence:
+#traceplot(out)
+plot(out)
+densityplot(out,ask=F)
+
+samples<-coda::as.mcmc.list(out$samples)
+gelman.plot(samples)
+
+# Print results
+print(out)
+
+write.csv(jags.View(out),file=paste("output/v4.9_output_",data.type,".csv",sep=""))
+ 
+save.image(file=paste("v4.9-CIBW_ME_Model_",data.type,".RData",sep=""))
+
+#Restore Rdata
+#load(file="v4.9-CIBW_ME_Model_left_side.RData")
+ 
+#saveRDS(out, file=paste("v4.9-CIBW_ME_Model_",data.type,".rds",sep=""))
+
+# Restore the output object
+# readRDS(file=paste("v4.9-CIBW_ME_Model_left_side.rds",sep=""))
+# readRDS(file=paste("v4.9-CIBW_ME_Model_right_side.rds",sep=""))
+
+# WRITE THIS CODE AS R SCRIPT FOR RUNNING ON HYALITE CLUSTER
+#knitr::purl("v4.9-CIBW_Multievent_Model-MODEL_CODE.Rmd",output="HyaliteRScripts/v4.9_ME.R")
+
+```
+
+```{r Frequentist Goodness of Fit tests, eval=FALSE, include=FALSE}
+
+library(R2ucare)
+
+##EXAMPLE CODE
+# geese = system.file("extdata", "geese.inp", package = "R2ucare")
+# geese = read_inp(geese)
+# 
+# geese.hist = geese$encounter_histories
+# geese.freq = geese$sample_size
+
+# Read in the data & convert obs to simpler multistate (maybe not simple enough):
+# ch<-CalfAge.SH.num %>%
+#      mutate_at(vars(3:15),
+#                function(x) case_when(
+#                     x == 1 ~ 0,
+#                     x == 2 ~ 1,
+#                     x == 3 ~ 2,
+#                     x == 4 | x == 14 ~ 3,
+#                     x %in% c(5:13) ~ 4,
+#                     x %in% c(15,16,18:23,29,34,41,48,55) ~ 5,
+#                     x %in% c(17,25:26,28,31:32,36:37,39:40,43:44,46:47,50:51,53,54) ~ 6,
+#                     x %in% c(24,27,30,33,35,38,42,45,49,52,56:66) ~ 7
+#                ))
+
+ch<-CalfAge.SH.num.csv %>%
+     mutate_at(vars(3:15),
+               function(x) case_when(
+                    x == 1 ~ 0,
+                    x == 2 ~ 1,
+                    x %in% c(3:66) ~ 2,
+               ))
+
+ch4exp<-tidyr::unite(ch[-c(1:2)],col=CH,sep="") #%>%  #collapses capture histories
+ch4exp_w_cnts<-as.data.frame(table(ch4exp))
+ch4exp_w_cnts<-tidyr::unite(ch4exp_w_cnts,col=CH,sep="   ")
+write.table(ch4exp_w_cnts, "ch4exp_w_cnts_lft.txt", sep="\t", row.names=FALSE, col.names=FALSE)
+
+ch<-tidyr::unite(ch[-c(1:2)],col=CH,sep=" ") %>%   #collapses capture hists to one variable for next step
+     arrange(.,CH)
+CH_w_cnts<-as.data.frame(table(ch)) #counts of each unique capture history
+freq<-as.numeric(CH_w_cnts$Freq)
+CH <- matrix(as.numeric(unlist(strsplit(as.character(CH_w_cnts$ch)," "))),
+             nrow=length(CH_w_cnts$ch),byrow=T)
+
+GOF3gsr_rt<-test3Gsr(CH, freq)
+GOF3gsm_rt<-test3Gsm(CH, freq)
+GOF3gwbwa_rt<-test3Gwbwa(CH, freq)
+GOFmi_rt<-testMitec(CH, freq)
+GOFml_rt<-testMltec(CH, freq)
+
+GOFall_rt<-overall_JMV(CH, freq)
+
+test3Gsr(CH, freq)
+test3Gsm(CH, freq)
+test3Gwbwa(CH, freq)
+testMitec(CH, freq)
+testMltec(CH, freq)
+
+```
+
+Create graphs of survival output
+
+```{r Survival graphs}
+
+# library(forcats)
+# library(hrbrthemes)
+ library(viridis)
+ library(ggridges)
+
+
+mymodel.mat<-as.matrix(coda::as.mcmc.list(out$samples))
+
+mymodel.dat <- as.data.frame(mymodel.mat)
+
+mymodel.surv.long<- mymodel.dat[,1:6] %>%
+     pivot_longer(c(phiN,phiB,phiC.d,phiYc.d), names_to="Parameter") %>%
+     arrange(Parameter)
+# 
+# #Violin plot
+# v.plot<- mymodel.surv.long %>%
+#      ggplot(aes(x=Parameter, y=value, fill=Parameter)) +
+#      geom_violin(width=1.4) +
+#      scale_fill_viridis(discrete=TRUE) +
+#      scale_color_viridis(discrete=TRUE) +
+#    #  theme_ipsum() +
+#      theme(legend.position="none", plot.title = element_text(size=11)) +
+#    #  coord_flip() + # This switch X and Y axis and allows to get the horizontal version
+#      scale_x_discrete(limits=c("phiN","phiB","phiYc.d","phiC.d"),
+#                       labels=c("Non-Breeder","Breeder","Young Calf","Older Calf (apparent)")) +
+#      xlab("Survival") +
+#      ylab("Density")
+# v.plot
+#    
+# #Violin & Box plot
+# vb.plot<- mymodel.surv.long %>%
+#      ggplot(aes(x=Parameter, y=value, fill=Parameter)) +
+#      geom_violin(width=1.4) +
+#      geom_boxplot(width=0.1, color="grey", alpha=0.2) +
+#      scale_fill_viridis(discrete=TRUE) +
+#    #  theme_ipsum() +
+#      theme(legend.position="none", plot.title = element_text(size=11)) +
+#      scale_x_discrete(limits=c("phiN","phiB","phiYc.d","phiC.d"),
+#                       labels=c("Non-Breeder","Breeder","Young Calf","Older Calf (apparent)")) +
+#      xlab("Survival") +
+#      ylab("Density")
+# vb.plot
+# 
+# #Basic whiskerplot using JagsUI function
+# whiskerplot(out, parameters = c("phiN","phiB","phiYc.d","phiC.d"))
+
+#Ridgeline plot
+rl.plot<- mymodel.surv.long %>%
+     ggplot(aes(x = value, y = Parameter, fill = Parameter)) +
+     geom_density_ridges(scale=1.5) +
+     stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.025, 0.975),color = "grey60",
+                         size=0.7,bandwidth = 0.005) +
+     theme_ridges(center_axis_labels = TRUE) + 
+     theme(legend.position = "none") +
+     scale_fill_viridis(discrete=TRUE, option="D") +
+     scale_x_continuous(expand = c(0.01,0)) +
+     scale_y_discrete(limits=c("phiN","phiB","phiC.d","phiYc.d"),
+                      labels=c("Non-Breeder\nSurvival","Breeder\nSurvival",
+                               "Older Calf\nApparent Survival","Young Calf\nSurvival"),
+                      expand=c(0.01,0)) +
+     coord_cartesian(xlim=c(0.35,1)) + #adjusts x axis
+
+     xlab("Density") +
+     ylab("")
+rl.plot
+
+
+```
+

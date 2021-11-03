@@ -1,0 +1,50 @@
+"0",""
+"0",""
+"0","## Choose which data to be used (Comment out the other two types not used)"
+"0"," data.file<-""ms_SH_data""   ##left-side CIBW data"
+"0",""
+"0",""
+"0","# Read in the data: "
+"0","mydata<-read_csv(file=paste(""../inputs/"",data.file,"".csv"",sep=""""))"
+"1","[1m[1mRows: [1m[22m[34m[34m471[34m[39m [1m[1mColumns: [1m[22m[34m[34m13[34m[39m
+"
+"1","[36m--[39m [1m[1mColumn specification[1m[22m [36m----------------------------------------------------------------------------------[39m
+[1mDelimiter:[22m "",""
+[32mdbl[39m (13): 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+"
+"1","
+[36mi[39m Use [38;5;235m[48;5;253m[38;5;235m[48;5;253m`spec()`[48;5;253m[38;5;235m[49m[39m to retrieve the full column specification for this data.
+[36mi[39m Specify the column types or set [38;5;235m[48;5;253m[38;5;235m[48;5;253m`show_col_types = FALSE`[48;5;253m[38;5;235m[49m[39m to quiet this message.
+"
+"0","# Read in starting latent state matrix"
+"0","start.mat.csv<-read_csv(file=paste(""../inputs/start_mat-"",data.file,"".csv"",sep=""""))"
+"1","[1m[1mRows: [1m[22m[34m[34m471[34m[39m [1m[1mColumns: [1m[22m[34m[34m13[34m[39m
+"
+"1","[36m--[39m [1m[1mColumn specification[1m[22m [36m----------------------------------------------------------------------------------[39m
+[1mDelimiter:[22m "",""
+[32mdbl[39m (13): 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+"
+"1","
+[36mi[39m Use [38;5;235m[48;5;253m[38;5;235m[48;5;253m`spec()`[48;5;253m[38;5;235m[49m[39m to retrieve the full column specification for this data.
+[36mi[39m Specify the column types or set [38;5;235m[48;5;253m[38;5;235m[48;5;253m`show_col_types = FALSE`[48;5;253m[38;5;235m[49m[39m to quiet this message.
+"
+"0","#head(mydata)"
+"0","#dim(mydata)"
+"0","N <- dim(mydata)[1]"
+"0","K <- dim(mydata)[2]"
+"0",""
+"0","# Compute the year of first capture for each individual:"
+"0","get.first.cap <- function(x) min(which(x != ""1""))"
+"0","e <- apply(mydata, 1, get.first.cap)"
+"0",""
+"0",""
+"0","alive.function <- function(){"
+"0","  alive <- start.mat.csv"
+"0","  for (i in 1:N){"
+"0","       for (j in 1:K) {"
+"0","            if (j < e[i]) {alive[i,j] = NA}"
+"0","       }"
+"0","  }"
+"0","  alive"
+"0","}"
+"0",""
