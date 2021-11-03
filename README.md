@@ -64,13 +64,13 @@ Methods in Ecology and Evolution (Nov 2021).
 
 #### Code:
 
-[CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/tree/master/scripts):
+[CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/scripts/CIBW_ME_Model-ms_code.R):
 R code for analyzing the Cook Inlet beluga whale photo-ID data using the
 multievent mark-recapture model described in the manuscript.
 
 #### Data:
 
-[ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/tree/master/data):
+[ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/ms_SH_data.csv):
 formatted Cook Inlet beluga whale photo-ID mark-recapture data for
 running the multievent model. The data were collected by Dr. Tamara
 McGuire and colleagues at [The Cook Inlet Beluga Whale Photo-ID
@@ -80,10 +80,10 @@ outside of this analysis without express permission from
 
 #### Additional Required Files:
 
-[start\_mat-ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/tree/master/data):
+[start\_mat-ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/start_mat-ms_SH_data.csv):
 formatted starting latent matrix required by JAGS to run the multievent
 model (see
-[Description.txt](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/master/data/DESCRIPTION.txt)
+[Description.txt](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/DESCRIPTION.txt)
 for more information)
 
 ------------------------------------------------------------------------
