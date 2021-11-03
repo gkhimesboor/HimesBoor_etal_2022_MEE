@@ -1,14 +1,14 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-#### Estimating a reproductive rate when offspring ages are uncertain: A novel multievent mark-recapture model applied to an endangered beluga whale population
+### Estimating a reproductive rate when offspring ages are uncertain: A novel multievent mark-recapture model applied to an endangered beluga whale population
 
-##### Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens
+#### Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens
 
 For questions regarding the code contact [Gina Himes
 Boor](mailto:gkhimesboor@montana.edu)
 
-##### Citation:
+#### Citation:
 
 Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J.
 Converse, J.R. McClung, A.D. Stephens. Estimating a reproductive rate
@@ -18,7 +18,7 @@ Methods in Ecology and Evolution
 
 ------------------------------------------------------------------------
 
-##### Abstract
+#### Abstract
 
 1.  Understanding survival and reproductive rates of a population is
     critical to determining its long-term dynamics and viability. For
@@ -62,14 +62,14 @@ Methods in Ecology and Evolution
 
 ------------------------------------------------------------------------
 
-##### Code:
+#### Code:
 
 [CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/tree/master/scripts):
 This file contains the code to analyze the Cook Inlet beluga whale data
 used in the manuscript. It is an Rmarkdown file. The html file created
 from Rmarkdown file can also be found in the folder.
 
-##### Data & Required Files:
+#### Data & Required Files:
 
 [ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/tree/master/data):
 This file contains the formatted Cook Inlet beluga whale photo-ID
@@ -86,7 +86,7 @@ for more information about this file)
 
 ------------------------------------------------------------------------
 
-##### Funding
+#### Funding
 
 Funding for development of this model came from the [North Pacific
 Research Board](https://www.nprb.org/) (project \# 1718). Cook Inlet
