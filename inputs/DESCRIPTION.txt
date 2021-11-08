@@ -1,6 +1,0 @@
-This folder contains the formatted data to run the multievent mark-recapture model as well as the starting latent matrix required by JAGS. See manuscript for detailed description of data.
-
-    ms_SH_data.csv: Formatted data to run the multievent mark-recapture model
-    start_mat-ms_SH_data.csv: Formatted "starting" latent matrix corresponding to the ms_SH_data
-
-The starting latent matrix is one possible iteration of the true states described by the observed sighting history data. JAGS requires this starting matrix in order to run the model. Other starting latent matrices could be used as long as the true states could give rise to the observed data.
