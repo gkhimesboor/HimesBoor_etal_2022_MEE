@@ -13,8 +13,7 @@ Boor](mailto:gkhimesboor@montana.edu)
 Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J.
 Converse, J.R. McClung, A.D. Stephens. Estimating a reproductive rate
 when offspring ages are uncertain: A novel multievent mark-recapture
-model applied to an endangered beluga whale population. Submitted to
-Methods in Ecology and Evolution (Nov 2021).
+model applied to an endangered beluga whale population.
 
 ------------------------------------------------------------------------
 
@@ -65,17 +64,20 @@ Methods in Ecology and Evolution (Nov 2021).
 #### Code:
 
 [CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/scripts/CIBW_ME_Model-ms_code.R):
-R code for analyzing the Cook Inlet beluga whale photo-ID data using the
-multievent mark-recapture model described in the manuscript.
+R code for the multievent mark-recapture model developed to estimate
+survival and reproductive rates from the Cook Inlet beluga whale
+photo-ID data, and that can be adapted for other data with similar
+characteristics (i.e., mark-recapture study involving marked adults that
+are sometimes observed with their unmarked offspring of unknown age)
 
 #### Data:
 
 [ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/ms_SH_data.csv):
 formatted Cook Inlet beluga whale photo-ID mark-recapture data for
-running the multievent model. The data were collected by Dr. Tamara
-McGuire and colleagues at [The Cook Inlet Beluga Whale Photo-ID
-Project](https://www.cookinletbelugas.com/) and should not be used
-outside of this analysis without express permission from
+running the multievent model described above. The data were collected by
+Dr. Tamara McGuire and colleagues at [The Cook Inlet Beluga Whale
+Photo-ID Project](https://www.cookinletbelugas.com/) and should not be
+used outside of this analysis without express permission from
 [Dr. McGuire](mailto:tamaracookinletbeluga@gmail.com).
 
 #### Additional Required Files:
@@ -84,7 +86,7 @@ outside of this analysis without express permission from
 formatted starting latent matrix required by JAGS to run the multievent
 model (see
 [Description.txt](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/DESCRIPTION.txt)
-for more information)
+for more information about this file)
 
 ------------------------------------------------------------------------
 

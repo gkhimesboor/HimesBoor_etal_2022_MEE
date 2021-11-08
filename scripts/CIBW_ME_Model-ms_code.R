@@ -161,19 +161,19 @@ alive.function <- function(){
 # phiC  survival prob. of calves (2yos and older)
 # psiN  transition prob. from non-breeder to breeder
 # psiB  transition prob. from breeder-no calf to breeder-with calf
-# pN  detection prob. of non-breeding class adults/subadults
-# pBn  detection prob. of breeding female adults with no calf
-# pBc  detection prob. of breeding female adults with a calf of any age
+# pN    detection prob. of non-breeding class adults/subadults
+# pBn   detection prob. of breeding female adults with no calf
+# pBc   detection prob. of breeding female adults with a calf of any age
 # deltaYc detection prob of YOY & 1yo calves
-# deltaC detectin prob of <=2yo calves
-# gamma prob of calf getting put in unknown age category
+# deltaC  detectin prob of <=2yo calves
+# gamma   prob of calf getting put in unknown age category
 # alphaTy prob of a YOY getting categorized as YOY without uncertainty
 # alphaTc prob of a <=1yo calf getting categorized as their true age without uncertainty
-# kappaY prob a YOY is assigned to J1- category
-# kappaC prob of a 3 or 4yo being assigned to the J2+ or J3+ categories respectively
-# omegaA prob of a 1 or 2yo being assigned to one of several categories that match true age with uncertainty
-# omegaB prob of a 3 or 4yo being assigned to true age with uncertainty (J3+ or J4+)
-# eta prob of 1 or 2yo being assigned to true age category bracketed high (J1-,J2-)
+# kappaY  prob a YOY is assigned to J1- category
+# kappaC  prob of a 3 or 4yo being assigned to the J2+ or J3+ categories respectively
+# omegaA  prob of a 1 or 2yo being assigned to one of several categories that match true age with uncertainty
+# omegaB  prob of a 3 or 4yo being assigned to category equal to true age or older (J3+ or J4+)
+# eta     prob of 1 or 2yo being assigned to category equal to true age or younger (J1-,J2-)
 # pi[1:13] prob. of being in initial states 1 to 13 (NB to Bc4c2)
 # 
 
@@ -209,13 +209,13 @@ M <- function() {
 
   # calf-age-assignment matrix priors
   gamma ~ dunif(0,1)   # P(calf can be put in an age category vs unknown)
-  alphaTy ~ dunif(0,1) # P(a YOY calf is identified as such without uncertainty)
-  alphaTc ~ dunif(0,1) # P(a 1,2,3, or 4yo calf is identified as such without uncertainty)
-  kappaY ~ dunif(0,1)  # P(a YOY is assigned to J1- category)
-  kappaC ~ dunif(0,1)  # P(a 3 or 4yo is assigned to the J2+ or J3+ categories respectively)
-  omegaA ~ dunif(0,1)  # P(a 1 or 2yo assigned to an uncertain category matching true age: J1+/J1- or J2+/J2-)
-  omegaB ~ dunif(0,1)  # P(a 3 or 4yo assigned to its true age with uncertainty: J3+ or J4+)
-  eta ~ dunif(0,1)     # P(a 1 or 2yo assgined uncertain true age bracketed high: J1- or J2- respectively)
+  alphaTy ~ dunif(0,1) # P(YOY calf is identified as such without uncertainty)
+  alphaTc ~ dunif(0,1) # P(1,2,3, or 4yo calf identified as such without uncertainty)
+  kappaY ~ dunif(0,1)  # P(YOY assigned to J1- category)
+  kappaC ~ dunif(0,1)  # P(3 or 4yo assigned to J2+ or J3+ categories respectively)
+  omegaA ~ dunif(0,1)  # P(1 or 2yo assigned to uncertain category matching true age: J1+/J1- or J2+/J2-)
+  omegaB ~ dunif(0,1)  # P(3 or 4yo assigned to J3+ or J4+ category respectively)
+  eta ~ dunif(0,1)     # P(1 or 2yo assigned to J1- or J2- category respectively)
 
   # Dirichlet priors for initial states 1:13 (Byoy to Bc4c2; excludes dead state which = 0)
   for (i in 1:13) {
