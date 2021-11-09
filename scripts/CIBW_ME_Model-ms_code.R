@@ -1,9 +1,9 @@
 #
 #
-## Code for multievent model applied to Cook Inlet beluga whale population
-## As described in Himes Boor, GK, TL McGuire, AJ Warlick, RL Taylor, SJ Converse, JR McClung, AD Stephens: 
-## Estimating a reproductive rate when offspring ages are uncertain: a novel multievent mark-recapture model applied to an 
-##   endangered beluga whale population
+## Code for multievent model applied to Cook Inlet beluga whale mark-recapture data as described in
+## Himes Boor, GK, TL McGuire, AJ Warlick, RL Taylor, SJ Converse, JR McClung, AD Stephens: 
+## Estimating a reproductive rate when offspring ages are uncertain: a novel multievent  
+##   mark-recapture model applied to an endangered beluga whale population
 ##
 ## This script loads data and runs the model described in the manuscript. 
 ## More details about the model structure and data can be found in the manuscript and supplemental information.
@@ -11,7 +11,12 @@
 ##
 ## 2021-11-03
 ##
-## Although these data have been processed successfully on a computer system at the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty. The USGS or the U.S. Government shall not be held liable for improper or incorrect use of the data described and/or contained herein.
+## Although these data have been processed successfully on a computer system at 
+##  Montana State University (MSU), no warranty expressed or implied is made regarding the display 
+##  or utility of the code or data for other purposes, nor on all computer systems, nor shall
+##  the act of distribution constitute any such warranty. Neither MSU nor the author of the code
+##  shall not be held liable for improper or incorrect use of the data or code described and/or
+##  contained herein.
 
 
 ##Required libraries
@@ -33,7 +38,7 @@ data.file<-"ms_SH_data"   ##left-side CIBW data
 
 # Read in the data: 
 mydata<-read_csv(file=paste(data.file,".csv",sep=""))
-# Read in starting latent state matrix
+# Read in starting latent state matrix (required by JAGS)
 start.mat.csv<-read_csv(file=paste("start_mat-",data.file,".csv",sep=""))
 
 # Get data dimensions (N=# individuals, K=# of observation periods (years))
@@ -61,25 +66,63 @@ alive.function <- function(){
 
 # Define the model
 
+#MATRICES:
+#State-Transition Matrices
+#There are 4 state-transition matrices. Listed below with dimensions [nrow,ncol
+# Matrix 1: Adult Survival [14,14]
+# Matrix 2: Young survival [14,37]
+# Matrix 3: Deterministic calf aging [37,14]
+# Matrix 4: Adult breeding transition [14,14]
+
+#Observation-Event Matrices
+#There are 3 observation matrices. Listed below with dimensions [nrow,ncol]
+# Matrix 1: Adult detection [14,14]
+# Matrix 2: Calf detection [14,25]
+# Matrix 3: Calf-age assignment [25,72]
+
 #Notation:
-# OBSERVATIONS (i.e. Events; n=72):
+# TRUE STATES (n=14)
+#  1 = NB = alive non-breeder     
+#  2 = B = alive previous breeder w/no calves
+#  3 = Byoy = breeder w/young-of-the-year (YOY)               
+#  4 = Bc1 = breeder w/1-year-old (1yo) calf           
+#  5 = Bc2 = breeder w/2yo calf              
+#  6 = Bc2yoy = breeder w/YOY & 2yo calf  
+#  7 = Bc3 = breeder w/3yo calf              
+#  8 = Bc3yoy = breeder w/YOY & 3yo calf    
+#  9 = Bc3c1 = breeder w/3yo & 1yo calf   
+# 10 = Bc4 = breeder w/4yo calf               
+# 11 = Bc4yoy = breeder w/YOY & 4yo calf    
+# 12 = Bc4c1 = breeder w/4yo & 1yo calf     
+# 13 = Bc4c2 = breeder w/4yo & 2yo calf  
+# 14 = D = dead     
+
+
+## OBSERVATIONS (i.e., Events; n=72):
+##  Describes the observation (or not) of an adult, potentially with a calf or calves.
+##  Calf ages were assigned during post-survey processing; the phrase "thought to be..."
+##   in the descriptions below indicate that two photo-ID technicians assigned the calf
+##   to the given calf-age category (e.g., J1- = calf 1 year old (yo) or younger) based
+##   on observed characteristics including size, coloration, and presence or absence of
+##   definitive observable neonate characteristics (e.g., fetal folds, eye right)
+
 # 1	=	0	not seen     
 # 2	=	P	seen alone     
 # 3	=	J0	seen with YOY     
-# 4	=	J1-	seen with a calf of indeterminate age (YOY or 1yo)     
-# 5	=	J1	seen with 1yo calf (i.e, 1st birthday to 2nd birthday)     
-# 6	=	J1+	seen with a calf of indeterminate age (1yo or older)     
-# 7	=	J2-	seen with a calf of indeterminate age (YOY, 1yo, or 2yo)     
-# 8	=	J2	seen with 2yo calf     
-# 9	=	J2+	seen with a calf of indeterminate age (2yo or older)     
-# 10	=	J3	seen with 3yo calf     
-# 11	=	J3+	seen with a calf of indeterminate age (3yo or older)     
+# 4	=	J1-	seen with a calf thought to be either a YOY or 1yo   
+# 5	=	J1	seen with 1yo calf (i.e, 1st birthday to 2nd birthday; no uncertainty in calf age)     
+# 6	=	J1+	seen with a calf thought to be 1yo or older)     
+# 7	=	J2-	seen with a calf thought to be a YOY, 1yo, or 2yo    
+# 8	=	J2	seen with 2yo calf (no uncertainty in calf age)   
+# 9	=	J2+	seen with a calf thought to be 2yo or older     
+# 10	=	J3	seen with 3yo calf (no uncertainty in calf age)   
+# 11	=	J3+	seen with a calf thought to be 3yo or older     
 # 12	=	J4	seen with a 4yo calf     
-# 13	=	J4+	seen with a calf of indeterminate age (4yo or older)     
-# 14	=	Unk	seen with a calf of indeterminate age        
-# 15	=	J1+ J0	seen with 2 calves, one a YOY (J0) and one 1yo or older (except must be 2yo or older)   
-# 16	=	J1+ J1-	seen with 2 calves, one 1yo or older and one 1yo or younger
-# 17	=	J1+ J1	et
+# 13	=	J4+	seen with a calf thought to be 4yo or older    
+# 14	=	Unk	seen with a calf of indeterminate age       
+# 15	=	J1+ J0	seen with 2 calves, one a YOY (J0) and one thought to be 1yo or older   
+# 16	=	J1+ J1-	seen with 2 calves, one thought to be 1yo or older and one thought to be 1yo or younger
+# 17	=	J1+ J1	etc
 # 18	=	J2- J0	
 # 19	=	J2- J1-	
 # 20	=	J2 J0	
@@ -129,93 +172,86 @@ alive.function <- function(){
 # 64	=	J4 Unk	     
 # 65	=	J4+ Unk	     
 # 66	=	Unk Unk
-# 67 =    J1+ J1+
-# 68 =    J1+ J2-
-# 69 =    J1+ J2
-# 70 =    J1+ J2+
-# 71 =    J2- J2-
-# 72 =    J2+ J2+  
-     
+# 67 =  J1+ J1+
+# 68 =  J1+ J2-
+# 69 =  J1+ J2
+# 70 =  J1+ J2+
+# 71 =  J2- J2-
+# 72 =  J2+ J2+ 
 
-# TRUE STATES
-# 1  = NB = alive non-breeder     
-# 2  = B = alive previous breeder w/no calves
-# 3  = Byoy = breeder w/YOY               
-# 4  = Bc1 = breeder w/1yo calf           
-# 5  = Bc2 = breeder w/2yo calf              
-# 6  = Bc2yoy = breeder w/YOY & 2yo calf  
-# 7  = Bc3 = breeder w/3yo calf              
-# 8  = Bc3yoy = breeder w/YOY & 3yo calf    
-# 9  = Bc3c1 = breeder w/3yo & 1yo calf   
-# 10 = Bc4 = breeder w/4yo calf               
-# 11 = Bc4yoy = breeder w/YOY & 4yo calf    
-# 12 = Bc4c1 = breeder w/4yo & 1yo calf     
-# 13 = Bc4c2 = breeder w/4yo & 2yo calf  
-# 14 = D = dead     
-
-
-# PARAMETERS
-# phiN  survival prob. of non-breeding class of adults/subadults
-# phiB  survival prob. of breeding class of adults
-# phiYc survival prob. of dependent calves (YOYs & 1yos)
-# phiC  survival prob. of calves (2yos and older)
+## MODEL PARAMETERS:
+##Survival, reproduction, and detection parameters
+# Sn  survival prob. of non-breeding class of adults/subadults
+# Sb  survival prob. of breeding class of adults
+# Sy  survival prob. of dependent calves (YOYs & 1yos) - does not account for death when mother dies
+# Sy.d   derived survival prob of dep. calves (YOY & 1yo) that does account for death when mother dies
+# phiC   apparent survival prob. of older calves (>=2yo) - does not account for death/independence when mother dies
+# phiC.d derived apparent survival prob of older calves (>=2yo) that does account for death/independence when mother dies
 # psiN  transition prob. from non-breeder to breeder
-# psiB  transition prob. from breeder-no calf to breeder-with calf
+# psiB  transition prob. from known-breeder-without-YOY to breeder-with-calf
 # pN    detection prob. of non-breeding class adults/subadults
 # pBn   detection prob. of breeding female adults with no calf
 # pBc   detection prob. of breeding female adults with a calf of any age
 # deltaYc detection prob of YOY & 1yo calves
-# deltaC  detectin prob of <=2yo calves
-# gamma   prob of calf getting put in unknown age category
-# alphaTy prob of a YOY getting categorized as YOY without uncertainty
-# alphaTc prob of a <=1yo calf getting categorized as their true age without uncertainty
+# deltaC  detection prob of calves >=2yo
+
+##Calf-age assignment parameters
+## Parameter descriptions below define the probabilities GIVEN all previous calf-age 
+##  assignment decisions for the calf of a given true age. Examples are provided below
+##  the definitions.
+# gamma   prob any calf is put into an age category (vs unknown-age category)
+# alphaTy prob a YOY is categorized as a J0 without uncertainty
+# alphaTc prob a >=1yo calf is categorized as their true age without uncertainty
 # kappaY  prob a YOY is assigned to J1- category
-# kappaC  prob of a 3 or 4yo being assigned to the J2+ or J3+ categories respectively
-# omegaA  prob of a 1 or 2yo being assigned to one of several categories that match true age with uncertainty
-# omegaB  prob of a 3 or 4yo being assigned to category equal to true age or older (J3+ or J4+)
-# eta     prob of 1 or 2yo being assigned to category equal to true age or younger (J1-,J2-)
+# kappaC  prob a 3 or 4yo is assigned to the J2+ or J3+ categories respectively
+# omegaA  prob a 1 or 2yo is assigned to one of several categories that match true age with uncertainty
+# omegaB  prob a 3 or 4yo is assigned to category equal to true age or older (J3+ or J4+, respectively)
+# eta     prob a 1 or 2yo is assigned to category equal to true age or younger (J1- or J2-, respectively)
+## Example 1: 
+##   The full probability that a YOY is assigned to the J1- category is equal
+##   to, gamma*(1-alphaTy)*kappaY, representing the probability the calf
+##   could be assigned to an age category (gamma), and was NOT assigned to the J0
+##   (no uncertainty in age) category, but WAS assigned to the J1- category.
+## Example 2:
+##   The full probability that a 2yo is assigned to the J2+ category is equal
+##   to, gamma*(1-alphaTc)*omegaA*(1-eta), representing the probability the calf
+##   could be assigned to an age category (gamma), and was not assigned to the
+##   J2 (no uncertainty) category (1-alphaTc), and was assigned to a category
+##   that matched its true age+/- (omegaA) (versus, say J1+ that does match its
+##   true age), and was not assigned to the category J2- (2 years old or younger)
+##   but rather to the category J2+ (1-eta).
+##   See manuscript Supporting Information (Appendix S2) for more details.
+
+##Initial state parameters
 # pi[1:13] prob. of being in initial states 1 to 13 (NB to Bc4c2)
-# 
 
-#MATRICES:
-#State-Transition Matrices
-#There are 4 state-transition matrices. I list them below with their definition and dimensions (nrow,ncol).
-# Matrix 1: Adult Survival [14,14]
-# Matrix 2: Young survival [14,37]
-# Matrix 3: Deterministic calf aging [37,14]
-# Matrix 4: Adult breeding transition [14,14]
 
-#Observation-Event Matrices
-#There are 3 observation matrices. I list them below with their dimensions (nrow,ncol).
-# Matrix 1: Adult detection [14,14]
-# Matrix 2: Calf detection [14,25]
-# Matrix 3: Calf-age determination [25,72]
 
-# THE MODEL:
+# THE MODEL CODE:
 M <- function() {
      
   # PRIORS 
-  phiN ~ dunif(0,1)    #non-breeding adult/subadult survival
-  phiB ~ dunif(0,1)    #breeding adult survival
-  phiYc ~ dunif(0,1)   #YOY & 1yo survival
-  phiC ~ dunif(0,1)    #older calf survival
-  psiN ~ dunif(0,1)   #breeding transition NB->Byoy
-  psiB ~ dunif(0,1)   #breeding transition B->Byoy (or other Bc's)
-  pN ~ dunif(0,1)      #non-breeder class adult detection
-  pBn ~ dunif(0,1)      #detection of female adult with no calf
-  pBc ~ dunif(0,1)      #detection of female breeder with a calf of any age
+  Sn ~ dunif(0,1) #non-breeding adult/subadult survival
+  Sb ~ dunif(0,1) #known-breeder adult survival
+  Sy ~ dunif(0,1) #YOY & 1yo survival
+  phiC ~ dunif(0,1) #older calf survival
+  psiN ~ dunif(0,1) #breeding transition NB->Byoy
+  psiB ~ dunif(0,1) #breeding transition B->Byoy (or other Bc's->Byoy)
+  pN ~ dunif(0,1) #non-breeder class adult detection
+  pBn ~ dunif(0,1) #detection of female known breeder adult with no calf
+  pBc ~ dunif(0,1) #detection of female known breeder with a calf of any age
   deltaYc ~ dunif(0,1) #dependent calf detection
-  deltaC ~ dunif(0,1)  #older calf detection
+  deltaC ~ dunif(0,1) #older calf detection
 
   # calf-age-assignment matrix priors
   gamma ~ dunif(0,1)   # P(calf can be put in an age category vs unknown)
   alphaTy ~ dunif(0,1) # P(YOY calf is identified as such without uncertainty)
-  alphaTc ~ dunif(0,1) # P(1,2,3, or 4yo calf identified as such without uncertainty)
-  kappaY ~ dunif(0,1)  # P(YOY assigned to J1- category)
-  kappaC ~ dunif(0,1)  # P(3 or 4yo assigned to J2+ or J3+ categories respectively)
-  omegaA ~ dunif(0,1)  # P(1 or 2yo assigned to uncertain category matching true age: J1+/J1- or J2+/J2-)
-  omegaB ~ dunif(0,1)  # P(3 or 4yo assigned to J3+ or J4+ category respectively)
-  eta ~ dunif(0,1)     # P(1 or 2yo assigned to J1- or J2- category respectively)
+  alphaTc ~ dunif(0,1) # P(1,2,3, or 4yo calf identified as such without uncertainty | previous categorization decisions)
+  kappaY ~ dunif(0,1)  # P(YOY assigned to J1- category  | previous categorization decisions)
+  kappaC ~ dunif(0,1)  # P(3 or 4yo assigned to J2+ or J3+ categories, respectively | previous categorization decisions)
+  omegaA ~ dunif(0,1)  # P(1 or 2yo assigned to uncertain category matching true age: J1+/J1- or J2+/J2-, respectively | previous categorization decisions)
+  omegaB ~ dunif(0,1)  # P(3 or 4yo assigned to J3+ or J4+ category, respectively | previous categorization decisions)
+  eta ~ dunif(0,1)     # P(1 or 2yo assigned to J1- or J2- category, respectively | previous categorization decisions)
 
   # Dirichlet priors for initial states 1:13 (Byoy to Bc4c2; excludes dead state which = 0)
   for (i in 1:13) {
@@ -504,28 +540,29 @@ M <- function() {
   po1.init[14,1:14]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0)
   
   
-  # Form the matrix product (full observation matrix & initial observation matrix)
-  po <- po1 %*% po2 %*% po3 
+  # Form the matrix product for the full observation matrix
+  ## Full initial observation matrix
   po.init <- po1.init %*% po2 %*% po3
-  
-  
+  ## Full observation matrix subsequent to initial observation
+  po <- po1 %*% po2 %*% po3
+
 
   ## STATE PROCESS: probabilities of states at t+1 (columns) given states at t (rows)
  
   # State Matrix 1: adult survival [14,14]
-  px1[1,1:14]<-c(phiN,0,0,0,0,0,0,0,0,0,0,0,0,1-phiN)
-  px1[2,1:14]<-c(0,phiB,0,0,0,0,0,0,0,0,0,0,0,1-phiB)
-  px1[3,1:14]<-c(0,0,phiB,0,0,0,0,0,0,0,0,0,0,1-phiB)
-  px1[4,1:14]<-c(0,0,0,phiB,0,0,0,0,0,0,0,0,0,1-phiB)
-  px1[5,1:14]<-c(0,0,0,0,phiB,0,0,0,0,0,0,0,0,1-phiB)
-  px1[6,1:14]<-c(0,0,0,0,0,phiB,0,0,0,0,0,0,0,1-phiB)
-  px1[7,1:14]<-c(0,0,0,0,0,0,phiB,0,0,0,0,0,0,1-phiB)
-  px1[8,1:14]<-c(0,0,0,0,0,0,0,phiB,0,0,0,0,0,1-phiB)
-  px1[9,1:14]<-c(0,0,0,0,0,0,0,0,phiB,0,0,0,0,1-phiB)
-  px1[10,1:14]<-c(0,0,0,0,0,0,0,0,0,phiB,0,0,0,1-phiB)
-  px1[11,1:14]<-c(0,0,0,0,0,0,0,0,0,0,phiB,0,0,1-phiB)
-  px1[12,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,phiB,0,1-phiB)
-  px1[13,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,phiB,1-phiB)
+  px1[1,1:14]<-c(Sn,0,0,0,0,0,0,0,0,0,0,0,0,1-Sn)
+  px1[2,1:14]<-c(0,Sb,0,0,0,0,0,0,0,0,0,0,0,1-Sb)
+  px1[3,1:14]<-c(0,0,Sb,0,0,0,0,0,0,0,0,0,0,1-Sb)
+  px1[4,1:14]<-c(0,0,0,Sb,0,0,0,0,0,0,0,0,0,1-Sb)
+  px1[5,1:14]<-c(0,0,0,0,Sb,0,0,0,0,0,0,0,0,1-Sb)
+  px1[6,1:14]<-c(0,0,0,0,0,Sb,0,0,0,0,0,0,0,1-Sb)
+  px1[7,1:14]<-c(0,0,0,0,0,0,Sb,0,0,0,0,0,0,1-Sb)
+  px1[8,1:14]<-c(0,0,0,0,0,0,0,Sb,0,0,0,0,0,1-Sb)
+  px1[9,1:14]<-c(0,0,0,0,0,0,0,0,Sb,0,0,0,0,1-Sb)
+  px1[10,1:14]<-c(0,0,0,0,0,0,0,0,0,Sb,0,0,0,1-Sb)
+  px1[11,1:14]<-c(0,0,0,0,0,0,0,0,0,0,Sb,0,0,1-Sb)
+  px1[12,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,Sb,0,1-Sb)
+  px1[13,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,Sb,1-Sb)
   px1[14,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
 
  
@@ -534,61 +571,61 @@ M <- function() {
   #    stays with its mother to the next year.
   # Departure states = original 14 states (rows)
   # Arrival states (columns):
-  # 1	NB        = non-breeder
-  # 2	B         = previous breeder with no calf
-  # 3	Byoy	     = breeder w/YOY survived
-  # 4	Byoy-D	= breeder, YOY died
-  # 5	Bc1	     = breeder w/1yo calf alive
-  # 6	Bc1-D	= breeder w/1yo calf died
-  # 7	Bc2	     = breeder w/2yo calf alive
-  # 8	Bc2-D	= breeder w/2yo calf died/left
-  # 9	Bc2yoy	= breeder w/2yo calf & YOY, both survive
-  # 10    Bc2yoy-D	= breeder w/2yo calf, YOY died
-  # 11	Byoyc2-D	= breeder w/YOY, 2yo calf died/left
+  #  1	NB = non-breeder
+  #  2	B = previous breeder with no calf
+  #  3	Byoy = breeder w/YOY survived
+  #  4	Byoy-D = breeder, YOY died
+  #  5	Bc1 = breeder w/1yo calf alive
+  #  6	Bc1-D = breeder w/1yo calf died
+  #  7	Bc2 = breeder w/2yo calf alive
+  #  8	Bc2-D = breeder w/2yo calf died/left
+  #  9	Bc2yoy = breeder w/2yo calf & YOY, both survive
+  # 10  Bc2yoy-D = breeder w/2yo calf, YOY died
+  # 11	Byoyc2-D = breeder w/YOY, 2yo calf died/left
   # 12	Bc2yoy-DD	= breeder w/2yo calf & YOY, both died/left
-  # 13	Bc3	     = breeder w/3yo calf alive
-  # 14	Bc3-D	= breeder w/3yo calf died/left
-  # 15	Bc3yoy	= breeder w/3yo calf & YOY, both survive
-  # 16	Bc3yoy-D	= breeder w/3yo calf, YOY died
-  # 17	Byoyc3-D	= breeder w/YOY, 3yo calf died/left
+  # 13	Bc3 = breeder w/3yo calf alive
+  # 14	Bc3-D = breeder w/3yo calf died/left
+  # 15	Bc3yoy = breeder w/3yo calf & YOY, both survive
+  # 16	Bc3yoy-D = breeder w/3yo calf, YOY died
+  # 17	Byoyc3-D = breeder w/YOY, 3yo calf died/left
   # 18	Bc3yoy-DD	= breeder w/3yo calf & YOY, both died/left
-  # 19	Bc3c1	= breeder w/3yo calf & 1yo calf, both alive
-  # 20	Bc3c1-D	= breeder w/3yo calf, 1yo calf died
-  # 21	Bc1c3-D	= breeder w/1yo calf, 3yo calf died/left
-  # 22	Bc3c1-DD	= breeder w/3yo calf & 1yo calf, both died/left
-  # 23	Bc4*	     = breeder w/4yo calf alive
-  # 24	Bc4*-D	= breeder w/4yo calf that died/left 
-  # 25	Bc4*yoy	= breeder w/4yo & YOY
+  # 19	Bc3c1 = breeder w/3yo calf & 1yo calf, both alive
+  # 20	Bc3c1-D = breeder w/3yo calf, 1yo calf died
+  # 21	Bc1c3-D = breeder w/1yo calf, 3yo calf died/left
+  # 22	Bc3c1-DD = breeder w/3yo calf & 1yo calf, both died/left
+  # 23	Bc4* = breeder w/4yo calf alive
+  # 24	Bc4*-D = breeder w/4yo calf that died/left 
+  # 25	Bc4*yoy = breeder w/4yo & YOY
   # 26	Bc4*yoy-D	= breeder w/4yo calf, YOY died
   # 27	Byoyc4*-D	= breeder w/YOY, 4yo died/left
-  # 28	Bc4*yoy-DD= breeder w/4yo & YOY, both died/left
-  # 29	Bc4*c1	= breeder w/4yo calf & 1yo calf, both alive
-  # 30	Bc4*c1-D	= breeder w/4yo calf, 1yo calf died
-  # 31	Bc1c4*-D	= breeder w/1yo calf, 4yo died/left
+  # 28	Bc4*yoy-DD = breeder w/4yo & YOY, both died/left
+  # 29	Bc4*c1 = breeder w/4yo calf & 1yo calf, both alive
+  # 30	Bc4*c1-D = breeder w/4yo calf, 1yo calf died
+  # 31	Bc1c4*-D = breeder w/1yo calf, 4yo died/left
   # 32	Bc4*c1-DD	= breeder w/4yo calf & 1yo calf, both died/left
-  # 33	Bc4*c2	= breeder w/4yo calf & 2yo calf, both alive
-  # 34	Bc4*c2-D	= breeder w/4yo calf, 2yo calf died/left
-  # 35	Bc2c4*-D	= breeder w/2yo calf, 4yo died/left
+  # 33	Bc4*c2 = breeder w/4yo calf & 2yo calf, both alive
+  # 34	Bc4*c2-D = breeder w/4yo calf, 2yo calf died/left
+  # 35	Bc2c4*-D = breeder w/2yo calf, 4yo died/left
   # 36	Bc4*c2-DD	= breeder w/2yo dead & 4yo calf died/left
-  # 37	D	     = dead
+  # 37	D = dead
 
   px2[1,1:37]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   px2[2,1:37]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[3,1:37]<-c(0,0,phiYc,1-phiYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[4,1:37]<-c(0,0,0,0,phiYc,1-phiYc,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[3,1:37]<-c(0,0,Sy,1-Sy,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[4,1:37]<-c(0,0,0,0,Sy,1-Sy,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   px2[5,1:37]<-c(0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[6,1:37]<-c(0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,(1-phiC)*(1-phiYc),0,
+  px2[6,1:37]<-c(0,0,0,0,0,0,0,0,phiC*Sy,phiC*(1-Sy),(1-phiC)*Sy,(1-phiC)*(1-Sy),0,
                  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   px2[7,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[8,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,
-                 (1-phiC)*(1-phiYc),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[9,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),(1-phiC)*phiYc,
-                 (1-phiYc)*(1-phiC),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[8,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*Sy,phiC*(1-Sy),(1-phiC)*Sy,
+                 (1-phiC)*(1-Sy),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  px2[9,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*Sy,phiC*(1-Sy),(1-phiC)*Sy,
+                 (1-Sy)*(1-phiC),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   px2[10,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC,1-phiC,0,0,0,0,0,0,0,0,0,0,0,0,0)
-  px2[11,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,phiC*(1-phiYc),
-                  (1-phiC)*phiYc,(1-phiC)*(1-phiYc),0,0,0,0,0,0,0,0,0)
-  px2[12,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*phiYc,
-                  phiC*(1-phiYc),phiYc*(1-phiC),(1-phiC)*(1-phiYc),0,0,0,0,0)
+  px2[11,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*Sy,phiC*(1-Sy),
+                  (1-phiC)*Sy,(1-phiC)*(1-Sy),0,0,0,0,0,0,0,0,0)
+  px2[12,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,phiC*Sy,
+                  phiC*(1-Sy),Sy*(1-phiC),(1-phiC)*(1-Sy),0,0,0,0,0)
   px2[13,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                   0,phiC,1-phiC,0)
   px2[14,1:37]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1)
@@ -599,16 +636,16 @@ M <- function() {
   
   # Departure states = 37 states from young survival matrix (see above)
   # Arrival states:
-  # 1	NB = non-breeder
-  # 2	B = previous breeder with no calf
-  # 3	Bc1 = breeder w/calf who was a YOY and now a 1yo                              
-  # 4	Bc2 = breeder w/a now 2yo calf                                                
-  # 5	Bc3 = breeder w/a now 3yo calf                                                
-  # 6	Bc3c1 = breeder w/a now 3yo calf & now 1yo calf                               
-  # 7	Bc4 = breeder w/a now 4yo (or older) calf                                     
-  # 8	Bc4c1 = breeder w/a now 4yo (or older) calf & now 1yo calf                    
-  # 9	Bc4c2 = breeder w/a now 4yo (or older) calf & now 2yo calf                    
-  # 10    Byoy-D = breeder whose YOY died (no calves remaining)                         
+  #  1	NB = non-breeder
+  #  2	B = previous breeder with no calf
+  #  3	Bc1 = breeder w/calf who was a YOY and now a 1yo                              
+  #  4	Bc2 = breeder w/a now 2yo calf                                                
+  #  5	Bc3 = breeder w/a now 3yo calf                                                
+  #  6	Bc3c1 = breeder w/a now 3yo calf & now 1yo calf                               
+  #  7	Bc4 = breeder w/a now 4yo (or older) calf                                     
+  #  8	Bc4c1 = breeder w/a now 4yo (or older) calf & now 1yo calf                    
+  #  9	Bc4c2 = breeder w/a now 4yo (or older) calf & now 2yo calf                    
+  # 10  Byoy-D = breeder whose YOY died (no calves remaining)                         
   # 11	Bc-D-L = breeder whose calf (or calves) died (or left) (no calves remaining)
   # 12	Bc3yoy-D = breeder with a now 3yo (and YOY who died)                        
   # 13	Bc4yoy-D = breeder with a now 4yo (or older) and YOY who died               
@@ -660,8 +697,8 @@ M <- function() {
   #   in which they have a calf 2 years old or older. In the latter case, the 
   #   adult will be transitioning to a 2-calf state.
 
-  # Departure states = 14 states from young aging matrix (see above)
-  # Arrival states = original 14 states (NB, Byoy, Bc1,...,D)
+  # Departure states (rows) = 14 states from young aging matrix (see above)
+  # Arrival states (columns) = original 14 states (NB, Byoy, Bc1,...,D)
   px4[1,1:14]<-c(1-psiN,0,psiN,0,0,0,0,0,0,0,0,0,0,0)
   px4[2,1:14]<-c(0,1-psiB,psiB,0,0,0,0,0,0,0,0,0,0,0)
   px4[3,1:14]<-c(0,0,0,1,0,0,0,0,0,0,0,0,0,0)
@@ -677,7 +714,7 @@ M <- function() {
   px4[13,1:14]<-c(0,0,0,0,0,0,0,0,0,1,0,0,0,0)
   px4[14,1:14]<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,1)
   
-  # form the matrix product (full state matrix)
+  # Form the matrix product (full state matrix)
   px <- px1 %*% px2 %*% px3 %*% px4
   
   #Likelihoods
@@ -702,12 +739,12 @@ M <- function() {
 
   #Calculate derived calf-survival parameter
   ##  (accounts for calves dying when mother dies)
-  phiYc.d <- phiB * phiYc
-  phiC.d <- phiB * phiC
+  Sy.d <- Sb * Sy
+  phiC.d <- Sb * phiC
   
 }
 
-#write model code to file
+#write model code to JAGS file
 mod.file.name<-paste("jags_CIBW_ME_Model_",data.file,".txt",sep="")
 write.model(M, mod.file.name)
 model.file <- paste(getwd(),mod.file.name, sep="/")
@@ -718,16 +755,16 @@ mydatax = list(N=N,Years=K,mydata=as.matrix(mydata),First=e)
 
 
 ## Initial values (to aid in convergence)
-initfunction <- function() list(pN=runif(1, 0.45, 0.5),phiB=runif(1,0.98,0.99),
+initfunction <- function() list(pN=runif(1, 0.45, 0.5),Sb=runif(1,0.98,0.99),
                                 alphaTy=runif(1,0.4,0.6), pBn=runif(1,0.75,0.85),
-                                phiYc=runif(1,0.92,0.97), deltaC=runif(1,0.4,0.5),
+                                Sy=runif(1,0.92,0.97), deltaC=runif(1,0.4,0.5),
                                 deltaYc=runif(1,0.48,0.6), kappaC=runif(1,0.5,0.7),
                                 omegaB=runif(1,0.5,0.7), phiC=runif(1,0.45,0.6),
                                 alive=as.matrix(alive.function()))
 
 
 # Specify the parameters to be monitored
-parameters <- c("phiN","phiB","phiC","phiC.d","phiYc","phiYc.d","psiN","psiB","pN","pBn","pBc","deltaYc",
+parameters <- c("Sn","Sb","phiC","phiC.d","Sy","Sy.d","psiN","psiB","pN","pBn","pBc","deltaYc",
                 "deltaC","alphaTy","alphaTc","gamma","kappaY","kappaC","omegaA",
                 "omegaB","eta","pi")
 
@@ -745,7 +782,7 @@ nt<-10      #thinning rate
 # out <- jags(mydatax,inits=initfunction,parameters,model.file,n.chains=3,n.iter=500,
 #             n.burnin=100,n.cores=3)
 
-# Full model run (takes many hours to run)
+# Full model run (takes many hours; ~6hrs on moderately fast laptop)
 out <- jags(mydatax,inits=initfunction,parameters,model.file,n.chains=nc,n.iter=ni,
             n.thin=nt,n.burnin=nbi,parallel=T,n.cores=nc)
 
