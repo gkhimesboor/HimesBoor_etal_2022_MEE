@@ -6,17 +6,18 @@
 ##   mark-recapture model applied to an endangered beluga whale population
 ##
 ## This script loads data and runs the model described in the manuscript. 
-## More details about the model structure and data can be found in the manuscript and supplemental information.
+## More details about the model structure and data can be found in the manuscript and 
+##   supplemental information.
 ##
 ##
 ## 2021-11-03
 ##
-## Although these data have been processed successfully on a computer system at 
-##  Montana State University (MSU), no warranty expressed or implied is made regarding the display 
-##  or utility of the code or data for other purposes, nor on all computer systems, nor shall
-##  the act of distribution constitute any such warranty. Neither MSU nor the author of the code
-##  shall not be held liable for improper or incorrect use of the data or code described and/or
-##  contained herein.
+## Although these data have been processed successfully on a computer system by the 
+##  primary author, no warranty expressed or implied is made regarding the display 
+##  or utility of the code or data for other purposes, nor on all computer systems, nor 
+##  shall the act of distribution constitute any such warranty. The author of the code
+##  shall not be held liable for improper or incorrect use of the data or code described 
+##  and/or contained herein.
 
 
 ##Required libraries
@@ -41,7 +42,7 @@ mydata<-read_csv(file=paste(data.file,".csv",sep=""))
 # Read in starting latent state matrix (required by JAGS)
 start.mat.csv<-read_csv(file=paste("start_mat-",data.file,".csv",sep=""))
 
-# Get data dimensions (N=# individuals, K=# of observation periods (years))
+# Get data dimensions (N = # individuals, K = # of observation periods (years))
 N <- dim(mydata)[1]
 K <- dim(mydata)[2]
 
@@ -85,7 +86,7 @@ alive.function <- function(){
 #  1 = NB = alive non-breeder     
 #  2 = B = alive previous breeder w/no calves
 #  3 = Byoy = breeder w/young-of-the-year (YOY)               
-#  4 = Bc1 = breeder w/1-year-old (1yo) calf           
+#  4 = Bc1 = breeder w/1-year-old (1yo) calf (i.e. calf in its first summer after its birth year)          
 #  5 = Bc2 = breeder w/2yo calf              
 #  6 = Bc2yoy = breeder w/YOY & 2yo calf  
 #  7 = Bc3 = breeder w/3yo calf              
@@ -101,7 +102,7 @@ alive.function <- function(){
 ## OBSERVATIONS (i.e., Events; n=72):
 ##  Describes the observation (or not) of an adult, potentially with a calf or calves.
 ##  Calf ages were assigned during post-survey processing; the phrase "thought to be..."
-##   in the descriptions below indicate that two photo-ID technicians assigned the calf
+##   in the descriptions below indicates that two photo-ID technicians assigned the calf
 ##   to the given calf-age category (e.g., J1- = calf 1 year old (yo) or younger) based
 ##   on observed characteristics including size, coloration, and presence or absence of
 ##   definitive observable neonate characteristics (e.g., fetal folds, eye right)
@@ -109,8 +110,8 @@ alive.function <- function(){
 # 1	=	0	not seen     
 # 2	=	P	seen alone     
 # 3	=	J0	seen with YOY     
-# 4	=	J1-	seen with a calf thought to be either a YOY or 1yo   
-# 5	=	J1	seen with 1yo calf (i.e, 1st birthday to 2nd birthday; no uncertainty in calf age)     
+# 4	=	J1-	seen with a calf thought to be either a YOY or 1yo
+# 5	=	J1	seen with 1yo calf (no uncertainty in calf age)     
 # 6	=	J1+	seen with a calf thought to be 1yo or older)     
 # 7	=	J2-	seen with a calf thought to be a YOY, 1yo, or 2yo    
 # 8	=	J2	seen with 2yo calf (no uncertainty in calf age)   
@@ -211,19 +212,22 @@ alive.function <- function(){
 ##   The full probability that a YOY is assigned to the J1- category is equal
 ##   to, gamma*(1-alphaTy)*kappaY, representing the probability the calf
 ##   could be assigned to an age category (gamma), and was NOT assigned to the J0
-##   (no uncertainty in age) category, but WAS assigned to the J1- category.
+##   (no uncertainty in age) category (1-alphaTy), but WAS assigned to the J1- 
+##   category (kappaY).
 ## Example 2:
 ##   The full probability that a 2yo is assigned to the J2+ category is equal
 ##   to, gamma*(1-alphaTc)*omegaA*(1-eta), representing the probability the calf
-##   could be assigned to an age category (gamma), and was not assigned to the
-##   J2 (no uncertainty) category (1-alphaTc), and was assigned to a category
-##   that matched its true age+/- (omegaA) (versus, say J1+ that does match its
-##   true age), and was not assigned to the category J2- (2 years old or younger)
-##   but rather to the category J2+ (1-eta).
+##   could be assigned to an age category (gamma), was not assigned to the
+##   J2 (no uncertainty) category (1-alphaTc), was assigned to a category
+##   that matched its true age + or - (omegaA) (versus, say J1+ that does match its
+##   true age), and was not assigned to the category J2- (2 years old or younger,
+##   i.e., true age or younger) but rather to the category J2+ (1-eta) (2 years
+##   old or older).
 ##   See manuscript Supporting Information (Appendix S2) for more details.
 
 ##Initial state parameters
 # pi[1:13] prob. of being in initial states 1 to 13 (NB to Bc4c2)
+# pi[14]=0 since an individual cannot be encountered initially in a dead state 
 
 
 
@@ -247,7 +251,7 @@ M <- function() {
   gamma ~ dunif(0,1)   # P(calf can be put in an age category vs unknown)
   alphaTy ~ dunif(0,1) # P(YOY calf is identified as such without uncertainty)
   alphaTc ~ dunif(0,1) # P(1,2,3, or 4yo calf identified as such without uncertainty | previous categorization decisions)
-  kappaY ~ dunif(0,1)  # P(YOY assigned to J1- category  | previous categorization decisions)
+  kappaY ~ dunif(0,1)  # P(YOY assigned to J1- category | previous categorization decisions)
   kappaC ~ dunif(0,1)  # P(3 or 4yo assigned to J2+ or J3+ categories, respectively | previous categorization decisions)
   omegaA ~ dunif(0,1)  # P(1 or 2yo assigned to uncertain category matching true age: J1+/J1- or J2+/J2-, respectively | previous categorization decisions)
   omegaB ~ dunif(0,1)  # P(3 or 4yo assigned to J3+ or J4+ category, respectively | previous categorization decisions)
@@ -275,11 +279,37 @@ M <- function() {
   px0[12] <- pi[12] # prob. of being in initial state Bc4c1 
   px0[13] <- pi[13] # prob. of being in initial state Bc4c2
   px0[14] <- 0      # prob. of being in initial state dead  
+
+    
+ ## OBSERVATION PROCESS: 
   
- # OBSERVATION PROCESS: probabilities of observations (columns) at a given occasion given 
- #                      states (rows) at this occasion
+  # OBSERVATION MATRIX 1: adult detection [14,14] 
+  #   This matrix describes the probabilities of adult detection (columns) 
+  #   given its true state (rows) at this occasion
   
-  # Matrix 1: adult detection [14,14]
+  # Rows (states) = 14 true states (see above)
+  # Observations/events (columns; n=14) = 
+  #  1	not seen
+  #  2	NB detected = non-breeder detected
+  #  3	B detected = known breeder without a calf in the observation year detected
+  #  4	Byoy detected = breeder w/ YOY in the observation year detected
+  #  5	Bc1 detected = breeder w/ a 1yo calf detected
+  #  6	Bc2 detected = breeder w/ a 2yo calf detected
+  #  7	Bc2yoy detected = breeder w/ 2yo and YOY calves detected
+  #  8	Bc3 detected = breeder w/ 3yo calf detected
+  #  9	Bc3yoy detected = breeder w/ 3yo and YOY calves detected
+  # 10	Bc3c1 detected = breeder w/ 3yo and 1yo calves detected
+  # 11	Bc4* detected = breeder w/ 4yo+ calf detected
+  # 12	Bc4*yoy detected = breeder w/ 4yo+ and YOY calves detected
+  # 13	Bc4*c1 detected = breeder w/ 4yo+ and 1yo calves detected
+  # 14	Bc4*c2 detected = breeder w/ 4yo+ and 2yo calves detected
+  
+  ## Note: this matrix only pertains to adult detection. The true state of the adult
+  ##       with respect to if it has a calf (or calves) and how old they are
+  ##       must be tracked, but the fact that the adult in that true state is
+  ##       detected does not mean its calf/calves was/were also detected (see
+  ##       Observation Matrix 2 for that process).
+  
   po1[1,1:14]<-c(1-pN,pN,0,0,0,0,0,0,0,0,0,0,0,0)
   po1[2,1:14]<-c(1-pBn,0,pBn,0,0,0,0,0,0,0,0,0,0,0)
   po1[3,1:14]<-c(1-pBc,0,0,pBc,0,0,0,0,0,0,0,0,0,0)
@@ -295,7 +325,35 @@ M <- function() {
   po1[13,1:14]<-c(1-pBc,0,0,0,0,0,0,0,0,0,0,0,0,pBc)
   po1[14,1:14]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0)
 
-  # Matrix 2: Calf Detection [14,25]
+  ## OBSERVATION MATRIX 2: Calf Detection [14,25]
+  # Rows = adult detection observations (n=14; see above)
+  # Calf Detection Given Adult Detection and True state (columns; n=25):
+  #  1	Not Seen	Adult not seen
+  #  2	Seen alone	Non-breeder/breeder (of any reproductive status) seen alone (i.e., without a calf)
+  #  3	Byoy w/YOY	Breeder seen with its YOY
+  #  4	Bc1 w/c1	Breeder seen with its 1yo calf
+  #  5	Bc2 w/c2	Breeder seen with 2yo calf
+  #  6	Bc2yoy w/YOY	Breeder with 2yo calf and YOY, only seen with YOY
+  #  7	Bc2yoy w/c2	Breeder w/2yo calf and YOY only seen with 2yo calf
+  #  8	Bc3 w/c3	Breeder seen with 3yo calf
+  #  9	Bc3yoy w/YOY	Breeder with 3yo calf and YOY, only seen with YOY
+  # 10	Bc3yoy w/c3	Breeder w/3yo calf and YOY only seen with 3yo calf
+  # 11	Bc3c1 w/c1	Breeder w/3yo and 1yo calf only seen with 1yo calf
+  # 12	Bc3c1 w/c3	Breeder w/3yo and 1yo calf only seen with 3yo calf
+  # 13	Bc4' w/c4'	Breeder seen with 4yo calf
+  # 14	Bc4'yoy w/YOY	Breeder with 4yo (or older) calf and YOY, only seen with YOY
+  # 15	Bc4'yoy w/c4'	Breeder w/4yo (or older) calf and YOY only seen with 4yo+ calf
+  # 16	Bc4'c1 w/c1	Breeder with 4yo (or older) calf and 1yo, only seen with 1yo
+  # 17	Bc4'c1 w/c4'	Breeder w/4yo (or older) calf and 1yo only seen with 4yo+ calf
+  # 18	Bc4'c2 w/c2	Breeder with 4yo (or older) calf and 2yo, only seen with 2yo calf
+  # 19	Bc4'c2 w/c4'	Breeder w/4yo (or older) calf and 2yo calf only seen with 4yo+ calf
+  # 20	Bc2yoy w/both	Breeder seen with both YOY and 2yo calf
+  # 21	Bc3yoy w/both	Breeder seen with both YOY and 3yo calf
+  # 22	Bc3c1 w/both	Breeder seen with 3yo & 1yo calves
+  # 23	Bc4'yoy w/both	Breeder seen with 4yo (or older) calf & YOY
+  # 24	Bc4'c1 w/both	Breeder seen with 4yo (or older) & 1yo calves
+  # 25	Bc4'c2 w/both	Breeder seen with 4yo (or older) & 2yo calves  
+  
   po2[1,1:25]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   po2[2,1:25]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
   po2[3,1:25]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
@@ -317,7 +375,11 @@ M <- function() {
   po2[14,1:25]<-c(0,(1-deltaC)*(1-deltaC),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,deltaC-deltaC^2,
                   deltaC-deltaC^2,0,0,0,0,0,deltaC^2)
 
-  # Matrix 3: Calf-age-assignment [25,72]
+  ## OBSERVATION MATRIX 3: Calf-age-assignment [25,72]
+  # Rows = calf detection observations (n=25; see above)
+  # Calf Age Assignment Given Adult Detection, Calf Detection, and True state (columns)
+  #   (n=72 observations/events defined at beginning of model code)
+ 
    po3[1,1:72]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
    po3[2,1:72]<-c(0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
