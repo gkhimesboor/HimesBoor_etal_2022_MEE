@@ -68,7 +68,9 @@ R code for the multievent mark-recapture model developed to estimate
 survival and reproductive rates from the Cook Inlet beluga whale
 photo-ID data, and that can be adapted for other data with similar
 characteristics (i.e., mark-recapture study involving marked adults that
-are sometimes observed with their unmarked offspring of unknown age)
+are sometimes observed with their unmarked offspring of unknown age).
+
+[CIBW_ME_sim.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/scripts/CIBW_ME_sim.R):  R code for the accompanying simulation analysis for the multievent mark-recapture model examining model performance across varying detection rates and sample population sizes.
 
 #### Data:
 
