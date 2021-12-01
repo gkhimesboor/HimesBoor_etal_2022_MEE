@@ -11,21 +11,23 @@ knitr::opts_chunk$set(
 )
 ```
 
-### Estimating a reproductive rate when offspring ages are uncertain: A novel multievent mark-recapture model applied to an endangered beluga whale population
+### Estimating reproductive rates and juvenile survival when offspring ages are uncertain: a novel multievent mark-recapture model applied to an endangered beluga whale population
 
 #### Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens
 
-For questions regarding the code contact [Gina Himes Boor](mailto:gkhimesboor@montana.edu)  
+For questions regarding the code, contact [Gina Himes Boor](mailto:gkhimesboor@montana.edu)  
 
 #### Citation:
-Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens. Estimating a reproductive rate when offspring ages are uncertain: A novel multievent mark-recapture model applied to an endangered beluga whale population.
+Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens. Estimating reproductive rates and juvenile survival when offspring ages are uncertain: a novel multievent mark-recapture model applied to an endangered beluga whale population.
 
 ***
 #### Abstract
-1.	Understanding survival and reproductive rates of a population is critical to determining its long-term dynamics and viability. For some hard-to-study species, obtaining the mark-recapture data necessary to estimate these vital rates can be difficult or impossible. This is particularly true for reproductive rates in populations where offspring are not always detected, remain with parents for multiple years, or cannot be aged with certainty. Existing reproductive-rate models cannot currently accommodate these situations.
-2.	To address this, we developed a novel multievent mark-recapture model that uses all available adult and adult-offspring sightings, including sightings with older offspring of uncertain age. We applied this model to 13 years of photo-ID data from a critically endangered population of beluga whales (Delphinapterus leucas) to estimate reproductive rates, as well as survival rates for breeding females, non-breeders (male and female), and calves. We also evaluated model performance using simulated data.
-3.	Our results indicated that breeding female belugas that did not give birth the previous year have a reproductive rate of 0.279 (95% credible interval: 0.226 – 0.34) and exhibit a higher survival rate (0.962; 0.945 – 0.975) than non-breeders (0.931; 0.917 – 0.944). Non-breeders become breeders at a rate of about 0.072 (0.059 – 0.085) per year. Survival of calves ≤1 year was 0.926 (0.85 – 0.964), while apparent survival (i.e., surviving and staying with mother) of older calves (≥2 years old) was 0.492 (0.398 – 0.595). Our simulation analysis indicated our model is asymptotically unbiased. Even at moderate sample sizes and detection rates, the ecological parameters of interest were estimated with good precision and minimal bias.
-4.	This work yields an important new development in multievent mark-recapture modeling, allowing estimation of reproductive rates and juvenile survival for populations with extended adult-offspring associations and uncertain offspring ages. Additionally, our model provides new robust demographic rate estimates for an endangered population that indicate low reproduction and non-breeder survival are likely both contributing to the population’s continued decline. Breeder survival may also be a factor, but additional work is necessary to understand the relative contributions of each demographic rate and to identify exogenous stressors. 
+1.	Understanding the survival and reproductive rate of a population is critical to determining its long-term dynamics and viability. For some hard-to-study species, obtaining the mark-recapture data necessary to estimate vital rates can be difficult or impossible, particularly for reproductive rates. Existing models cannot currently accommodate data from populations in which offspring are not always detected, remain with parents for multiple years, and cannot be aged with certainty.
+2.	To address this, we developed a novel multievent mark-recapture model that uses all available adult and adult-offspring sightings, including sightings with older offspring of uncertain age. To illustrate the model, we applied it using a Bayesian framework to thirteen years of photo-ID data from a critically endangered population of beluga whales (Delphinapterus leucas) to estimate reproductive rates, and survival rates for breeding females, non-breeders (male and female), and calves. We also evaluated model performance using simulated data under varying sample sizes, and adult and calf detection rates.
+3.	Applying our model to the beluga data yielded reasonably precise estimates for all demographic rates of interest and provided new insight into proximate causes of the population’s decline. Our estimates indicated that non-breeder survival (0.962; 95% credible interval: 0.945 – 0.975) and reproductive rates for breeders that had not given birth the previous year (0.279; 0.226 – 0.34) are low relative to other belugas and likely contributing to negative growth. Breeding female survival (0.962; 0.945 – 0.975) was marginally low and could also be a factor in the population’s decline. Our simulation analysis indicated the model is asymptotically unbiased. Even at moderate sample sizes and detection rates it estimated ecological parameters of interest with good precision and low bias.
+4.	This work yields an important new development in multievent mark-recapture modeling, allowing estimation of reproductive rates and juvenile survival for populations with extended adult-offspring associations and uncertain offspring ages, such as other marine mammals, elephants, and some great apes, bats, and birds. Additionally, our model provides new robust demographic rate estimates for an endangered population that were previously inestimable and that will enable new insights into the population’s decline and its causal mechanisms.
+
+
 
 ***
 #### Code:
