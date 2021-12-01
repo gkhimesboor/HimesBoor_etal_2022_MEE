@@ -64,17 +64,17 @@ mark-recapture model applied to an endangered beluga whale population.
 
 #### Code:
 
-[CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/scripts/CIBW_ME_Model-ms_code.R):
-R code for the multievent mark-recapture model developed to estimate
-survival and reproductive rates from the Cook Inlet beluga whale
-photo-ID data, and that can be adapted for other data with similar
-characteristics (i.e., mark-recapture study involving marked adults that
-are sometimes observed with their unmarked offspring of unknown age).
+[CIBW\_ME\_Model-ms\_code.R](scripts/CIBW_ME_Model-ms_code.R): R code
+for the multievent mark-recapture model developed to estimate survival
+and reproductive rates from the Cook Inlet beluga whale photo-ID data,
+and that can be adapted for other data with similar characteristics
+(i.e., mark-recapture study involving marked adults that are sometimes
+observed with their unmarked offspring of unknown age).
 
-[CIBW\_ME\_sim.R](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/scripts/CIBW_ME_sim.R):
-R code for the accompanying simulation analysis for the multievent
-mark-recapture model examining model performance across varying
-detection rates and sample population sizes.
+[CIBW\_ME\_sim.R](scripts/CIBW_ME_sim.R): R code for the accompanying
+simulation analysis for the multievent mark-recapture model examining
+model performance across varying detection rates and sample population
+sizes.
 
 #### Data:
 

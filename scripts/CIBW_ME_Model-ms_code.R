@@ -107,18 +107,18 @@ alive.function <- function(){
 ##   on observed characteristics including size, coloration, and presence or absence of
 ##   definitive observable neonate characteristics (e.g., fetal folds, eye right)
 
-# 1	=	0	not seen     
-# 2	=	P	seen alone     
-# 3	=	J0	seen with YOY     
-# 4	=	J1-	seen with a calf thought to be either a YOY or 1yo
-# 5	=	J1	seen with 1yo calf (no uncertainty in calf age)     
-# 6	=	J1+	seen with a calf thought to be 1yo or older)     
-# 7	=	J2-	seen with a calf thought to be a YOY, 1yo, or 2yo    
-# 8	=	J2	seen with 2yo calf (no uncertainty in calf age)   
-# 9	=	J2+	seen with a calf thought to be 2yo or older     
-# 10 = J3	seen with 3yo calf (no uncertainty in calf age)   
+# 1 = 0 not seen     
+# 2 = P seen alone     
+# 3 = J0 seen with YOY     
+# 4 = J1- seen with a calf thought to be either a YOY or 1yo
+# 5 = J1 seen with 1yo calf (no uncertainty in calf age)     
+# 6 = J1+ seen with a calf thought to be 1yo or older)     
+# 7 = J2- seen with a calf thought to be a YOY, 1yo, or 2yo    
+# 8 = J2 seen with 2yo calf (no uncertainty in calf age)   
+# 9 = J2+ seen with a calf thought to be 2yo or older     
+# 10 = J3 seen with 3yo calf (no uncertainty in calf age)   
 # 11 = J3+ seen with a calf thought to be 3yo or older     
-# 12 = J4	seen with a 4yo calf     
+# 12 = J4 seen with a 4yo calf     
 # 13 = J4+ seen with a calf thought to be 4yo or older    
 # 14 = Unk seen with a calf of indeterminate age       
 # 15 = J1+ J0 seen with 2 calves, one a YOY (J0) and one thought to be 1yo or older   
