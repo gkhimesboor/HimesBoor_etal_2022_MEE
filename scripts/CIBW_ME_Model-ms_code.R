@@ -644,7 +644,7 @@ M <- function() {
   #  9	Bc2yoy = breeder w/2yo calf & YOY, both survive
   # 10  Bc2yoy-D = breeder w/2yo calf, YOY died
   # 11	Byoyc2-D = breeder w/YOY, 2yo calf died/left
-  # 12	Bc2yoy-DD	= breeder w/2yo calf & YOY, both died/left
+  # 12	Bc2yoy-DD = breeder w/2yo calf & YOY, both died/left
   # 13	Bc3 = breeder w/3yo calf alive
   # 14	Bc3-D = breeder w/3yo calf died/left
   # 15	Bc3yoy = breeder w/3yo calf & YOY, both survive
@@ -658,17 +658,17 @@ M <- function() {
   # 23	Bc4* = breeder w/4yo calf alive
   # 24	Bc4*-D = breeder w/4yo calf that died/left 
   # 25	Bc4*yoy = breeder w/4yo & YOY
-  # 26	Bc4*yoy-D	= breeder w/4yo calf, YOY died
-  # 27	Byoyc4*-D	= breeder w/YOY, 4yo died/left
+  # 26	Bc4*yoy-D = breeder w/4yo calf, YOY died
+  # 27	Byoyc4*-D = breeder w/YOY, 4yo died/left
   # 28	Bc4*yoy-DD = breeder w/4yo & YOY, both died/left
   # 29	Bc4*c1 = breeder w/4yo calf & 1yo calf, both alive
   # 30	Bc4*c1-D = breeder w/4yo calf, 1yo calf died
   # 31	Bc1c4*-D = breeder w/1yo calf, 4yo died/left
-  # 32	Bc4*c1-DD	= breeder w/4yo calf & 1yo calf, both died/left
+  # 32	Bc4*c1-DD = breeder w/4yo calf & 1yo calf, both died/left
   # 33	Bc4*c2 = breeder w/4yo calf & 2yo calf, both alive
   # 34	Bc4*c2-D = breeder w/4yo calf, 2yo calf died/left
   # 35	Bc2c4*-D = breeder w/2yo calf, 4yo died/left
-  # 36	Bc4*c2-DD	= breeder w/2yo dead & 4yo calf died/left
+  # 36	Bc4*c2-DD = breeder w/2yo dead & 4yo calf died/left
   # 37	D = dead
 
   px2[1,1:37]<-c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
