@@ -64,21 +64,21 @@ mark-recapture model applied to an endangered beluga whale population.
 
 #### Code:
 
-[CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/scripts/CIBW_ME_Model-ms_code.R):
+[CIBW\_ME\_Model-ms\_code.R](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/scripts/CIBW_ME_Model-ms_code.R):
 R code for the multievent mark-recapture model developed to estimate
 survival and reproductive rates from the Cook Inlet beluga whale
 photo-ID data, and that can be adapted for other data with similar
 characteristics (i.e., mark-recapture study involving marked adults that
 are sometimes observed with their unmarked offspring of unknown age).
 
-[CIBW\_ME\_sim.R](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/scripts/CIBW_ME_sim.R):
+[CIBW\_ME\_sim.R](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/scripts/CIBW_ME_sim.R):
 R code for the accompanying simulation analysis for the multievent
 mark-recapture model examining model performance across varying
 detection rates and sample population sizes.
 
 #### Data:
 
-[ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/ms_SH_data.csv):
+[ms\_SH\_data.csv](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/inputs/ms_SH_data.csv):
 formatted Cook Inlet beluga whale photo-ID mark-recapture data for
 running the multievent model described above. The data were collected by
 Dr. Tamara McGuire and colleagues at [The Cook Inlet Beluga Whale
@@ -88,10 +88,10 @@ used outside of this analysis without express permission from
 
 #### Additional Required Files:
 
-[start\_mat-ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/start_mat-ms_SH_data.csv):
+[start\_mat-ms\_SH\_data.csv](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/inputs/start_mat-ms_SH_data.csv):
 formatted starting latent matrix required by JAGS to run the multievent
-model (see
-[README-Inputs](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/111a3e76d362a4d63a4137cdbc4ac4525229834e/inputs/README-Inputs.md)
+model (see Inputs [README
+file](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/4467a92348c9e42e78432b36def0d4067a6d9639/inputs/README.md)
 for more information about this file)
 
 ------------------------------------------------------------------------
