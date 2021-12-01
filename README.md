@@ -62,7 +62,7 @@ mark-recapture model applied to an endangered beluga whale population.
 
 ------------------------------------------------------------------------
 
-#### Code:
+#### CODE:
 
 **Model:**  
 [CIBW\_ME\_Model-ms\_code.R](scripts/CIBW_ME_Model-ms_code.R): R code
@@ -78,7 +78,7 @@ simulation analysis for the multievent mark-recapture model examining
 model performance across varying detection rates and sample population
 sizes.
 
-#### Data:
+#### DATA:
 
 [ms\_SH\_data.csv](inputs/ms_SH_data.csv): formatted Cook Inlet beluga
 whale photo-ID mark-recapture data for running the multievent model
