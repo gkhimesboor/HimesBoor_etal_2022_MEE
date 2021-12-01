@@ -650,7 +650,7 @@ M <- function() {
   # 15	Bc3yoy = breeder w/3yo calf & YOY, both survive
   # 16	Bc3yoy-D = breeder w/3yo calf, YOY died
   # 17	Byoyc3-D = breeder w/YOY, 3yo calf died/left
-  # 18	Bc3yoy-DD	= breeder w/3yo calf & YOY, both died/left
+  # 18	Bc3yoy-DD = breeder w/3yo calf & YOY, both died/left
   # 19	Bc3c1 = breeder w/3yo calf & 1yo calf, both alive
   # 20	Bc3c1-D = breeder w/3yo calf, 1yo calf died
   # 21	Bc1c3-D = breeder w/1yo calf, 3yo calf died/left
