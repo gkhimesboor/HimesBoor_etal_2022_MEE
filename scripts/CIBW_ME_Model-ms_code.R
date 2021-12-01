@@ -2,8 +2,8 @@
 #
 ## Code for multievent model applied to Cook Inlet beluga whale mark-recapture data as described in
 ## Himes Boor, GK, TL McGuire, AJ Warlick, RL Taylor, SJ Converse, JR McClung, AD Stephens: 
-## Estimating a reproductive rate when offspring ages are uncertain: a novel multievent  
-##   mark-recapture model applied to an endangered beluga whale population
+## Estimating reproductive rates and juvenile survival when offspring ages are uncertain: a novel  
+##   multievent mark-recapture model applied to an endangered beluga whale population
 ##
 ## This script loads data and runs the model described in the manuscript. 
 ## More details about the model structure and data can be found in the manuscript and 

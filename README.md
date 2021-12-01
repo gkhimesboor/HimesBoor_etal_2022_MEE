@@ -91,7 +91,7 @@ used outside of this analysis without express permission from
 [start\_mat-ms\_SH\_data.csv](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/start_mat-ms_SH_data.csv):
 formatted starting latent matrix required by JAGS to run the multievent
 model (see
-[Description.txt](https://github.com/gkhimesboor/HimesBoor_etal_2021_MEE/blob/9976e998f1fb87a36f7e40a1775889215e14dc55/inputs/DESCRIPTION.txt)
+[README-Inputs](https://github.com/gkhimesboor/ME_Repro-HimesBoor_etal/blob/111a3e76d362a4d63a4137cdbc4ac4525229834e/inputs/README-Inputs.md)
 for more information about this file)
 
 ------------------------------------------------------------------------
