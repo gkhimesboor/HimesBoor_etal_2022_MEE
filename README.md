@@ -10,10 +10,7 @@ Boor](mailto:gkhimesboor@montana.edu)
 
 #### Citation:
 
-Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J.
-Converse, J.R. McClung, A.D. Stephens. (In review). Estimating reproductive rates and
-juvenile survival when offspring ages are uncertain: a novel multievent
-mark-recapture model applied to an endangered beluga whale population.
+Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens. (In review). Estimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel multievent mark-resight model with beluga whale case study.
 
 ------------------------------------------------------------------------
 
