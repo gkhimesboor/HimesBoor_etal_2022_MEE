@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-### EEstimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel multievent mark-resight model with beluga whale case study
+### Estimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel multievent mark-resight model with beluga whale case study
 
 #### Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J. Converse, J.R. McClung, A.D. Stephens
 
