@@ -1,23 +1,23 @@
 #
 #
-## Code for multievent model applied to Cook Inlet beluga whale mark-recapture data as described in
+## Code for the multievent model applied to Cook Inlet beluga whale mark-recapture data as described in
 ## Himes Boor, GK, TL McGuire, AJ Warlick, RL Taylor, SJ Converse, JR McClung, AD Stephens: 
-## Estimating reproductive rates and juvenile survival when offspring ages are uncertain: a novel  
-##   multievent mark-recapture model applied to an endangered beluga whale population
+## Estimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel 
+##    multievent mark-resight model with beluga whale case study
 ##
 ## This script loads data and runs the model described in the manuscript. 
 ## More details about the model structure and data can be found in the manuscript and 
 ##   supplemental information.
 ##
 ##
-## 2021-11-03
+## 2022-11-02
 ##
-## Although these data have been processed successfully on a computer system by the 
-##  primary author, no warranty expressed or implied is made regarding the display 
-##  or utility of the code or data for other purposes, nor on all computer systems, nor 
-##  shall the act of distribution constitute any such warranty. The author of the code
-##  shall not be held liable for improper or incorrect use of the data or code described 
-##  and/or contained herein.
+## Although these data have been processed successfully on a computer system using R version
+##  3.6.1 and JAGS version 4.3, by the primary author, no warranty expressed or implied
+##  is made regarding the display or utility of the code or data for other purposes, nor 
+##  on all computer systems, nor later versions of R or JAGS, nor shall the act of distribution
+##  constitute any such warranty. The author of the code shall not be held liable for improper
+##  or incorrect use of the data or code described and/or contained herein.
 
 
 ##Required libraries
