@@ -13,10 +13,6 @@ Boor](mailto:gkhimesboor@montana.edu)
 Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J.
 Converse, J.R. McClung, A.D. Stephens. 2022. Estimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel multievent mark-resight model with beluga whale case study. Methods in Ecology and Evolution. In press.
 
-The code and data are permanently archived at 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7275033.svg)](https://doi.org/10.5281/zenodo.7275033)
-
-
 
 ------------------------------------------------------------------------
 
