@@ -11,7 +11,10 @@ Boor](mailto:gkhimesboor@montana.edu)
 #### Citation:
 
 Himes Boor, G.K., T.L. McGuire, A.J. Warlick, R.L. Taylor, S.J.
-Converse, J.R. McClung, A.D. Stephens. 2022. Estimating reproductive and juvenile survival rates when offspring ages are uncertain: a novel multievent mark-resight model with beluga whale case study. Methods in Ecology and Evolution. In press.
+Converse, J.R. McClung, A.D. Stephens. 2022. Estimating reproductive and 
+juvenile survival rates when offspring ages are uncertain: a novel multievent 
+mark-resight model with beluga whale case study. Methods in Ecology and 
+Evolution. In press.
 
 
 ------------------------------------------------------------------------
@@ -61,10 +64,11 @@ Converse, J.R. McClung, A.D. Stephens. 2022. Estimating reproductive and juvenil
 **Model:**  
 [CIBW_ME_Model-ms_code.R](scripts/CIBW_ME_Model-ms_code.R): R code for
 the multievent mark-recapture model developed to estimate survival and
-reproductive rates from the Cook Inlet beluga whale photo-ID data, and
-that can be adapted for other data with similar characteristics (i.e.,
-mark-recapture study involving marked adults that are sometimes observed
-with their unmarked offspring of unknown age).
+reproductive rates from sighting history data of marked adults that are 
+sometimes observed with their unmarked offspring of unknown age. The model was
+originally developed for photo-ID data from Cook Inlet beluga whales, but it
+can be adapted for other populations with similar characteristics (i.e.,
+extended parental care of offspring that can not always be aged with certainty). 
 
 **Simulations:**  
 [CIBW_ME_sim.R](scripts/CIBW_ME_sim.R): R code for the accompanying
